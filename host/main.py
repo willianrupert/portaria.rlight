@@ -1,13 +1,22 @@
 import time
+import uuid
+import os
 import pygame
 from core.config import config
 from core.machine_state import host_fsm
 from core.serial_bridge import esp32_bridge
+from core.db import db_manager
 from ui.window import kiosk
 from ui.screens import StateScreens
 from integrations.homeassistant import ha_integration
 from integrations.camera_usb import webcam
 from integrations.oracle_api import oracle_api
+
+try:
+    import sdnotify
+    systemd_notifier = sdnotify.SystemdNotifier()
+except ImportError:
+    systemd_notifier = None
 
 def on_state_transition(new_state, old_state):
     """
@@ -15,24 +24,38 @@ def on_state_transition(new_state, old_state):
     """
     print(f"[Core FSM] Transição: {old_state} -> {new_state}")
     
-    # 1. Gatilhos de Tela e Câmera
     if new_state == "AWAKE":
-        # Avisa o ESP32 que a UI host está pronta pra focar no QR
         esp32_bridge.send_cmd("SCREEN_READY")
         
     elif new_state == "CONFIRMING" and old_state != "CONFIRMING":
-        # Momento Crítico. ESP32 diz que estabilizou e preparou assinatura.
-        # Nós tiramos a foto 1080p na memória em background.
         webcam.capture_snapshot()
         
     elif new_state == "RECEIPT":
-        # A API Oracle receberá o JWT fornecido pelo ESP32 e a Foto capturada antes.
-        # Fire-and-forget background upload
-        raw_img = webcam.last_frame
+        # S8: Salvar a foto localmente vinculada a um UUID no filesystem temporário
+        raw_surface = webcam.get_last_surface()
         jwt_token = host_fsm.get_jwt()
-        if raw_img and jwt_token:
-            oracle_api.push_receipt_async(jwt_token, raw_img)
-
+        weight_g = host_fsm.get_weight()
+        
+        if jwt_token:
+            token_uuid = str(uuid.uuid4())[:8]
+            photo_dir = "/tmp/rlight_photos" # folder2ram (Zero-write)
+            os.makedirs(photo_dir, exist_ok=True)
+            photo_path = os.path.join(photo_dir, f"{token_uuid}.jpg")
+            
+            if raw_surface:
+                pygame.image.save(raw_surface, photo_path)
+            else:
+                photo_path = "" # Sem foto
+                
+            print(f"[Sync] Enfileirando entrega {token_uuid} no SQLite local.")
+            db_manager.insert_delivery(
+                token_uuid=token_uuid,
+                ts=int(time.time()),
+                jwt=jwt_token,
+                weight_g=weight_g,
+                carrier="UNKNOWN", 
+                photo_path=photo_path
+            )
 
 def main():
     print("========================================")
@@ -40,25 +63,24 @@ def main():
     print(" Padrão de Alta Confiabilidade (Kiosk)  ")
     print("========================================")
     
-    # Inicializa Home Assistant
+    if systemd_notifier:
+        systemd_notifier.notify("READY=1")
+    
     ha_integration.start()
-    
-    # Prepara listeners 
+    oracle_api.start_sync_worker() # S7: Inicia thread isolada do banco SQLite
     host_fsm.subscribe(on_state_transition)
-    
-    # Inicia a ponte USB com a S3
     esp32_bridge.start()
     
     running = True
-    
-    # Main Loop Gráfico
     while running:
+        if systemd_notifier:
+            systemd_notifier.notify("WATCHDOG=1") # S9: Watchdog
+            
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    # Escape sai apenas durante debug via teclado USB
                     running = False
 
         state = host_fsm.get_state()
@@ -78,12 +100,19 @@ def main():
             StateScreens.render_confirming()
         elif state == "RECEIPT":
             StateScreens.render_receipt(host_fsm.get_jwt(), webcam.get_last_surface())
+        elif state == "RESIDENT_P1":
+            StateScreens.render_resident_p1()
+        elif state == "RESIDENT_P2":
+            StateScreens.render_resident_p2()
+        elif state == "REVERSE_PICKUP":
+            StateScreens.render_reverse_pickup()
         elif state in ["DOOR_ALERT", "ERROR"]:
             StateScreens.render_door_alert()
         else:
             StateScreens.render_idle()
             
         kiosk.flip()
+        time.sleep(0.05) # Yielding limpo perante o thread pool serial
         
     print("[Shutdown] Desligando módulos...")
     esp32_bridge.stop()
