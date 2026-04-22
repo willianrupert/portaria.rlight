@@ -54,9 +54,8 @@ void StateMachine::tick(const PhysicalState& world) {
     transition(State::IDLE); return;
   }
 
-  // KEYPAD / PASSWORD: processado em qualquer estado exceto durante entrega ativa
+  // WIEGAND: processado em qualquer estado exceto durante entrega ativa
   bool delivery_active = (_ctx.state == State::WAITING_QR  ||
-                          _ctx.state == State::WAITING_PASS||
                           _ctx.state == State::AUTHORIZED   ||
                           _ctx.state == State::INSIDE_WAIT  ||
                           _ctx.state == State::DELIVERING   ||
@@ -65,19 +64,14 @@ void StateMachine::tick(const PhysicalState& world) {
                           _ctx.state == State::RECEIPT      ||
                           _ctx.state == State::REVERSE_PICKUP);
 
-  // Início de digitação tira o sistema do IDLE ou AWAKE
-  if (!delivery_active && world.keypad_active && _ctx.state != State::WAITING_PASS) {
-      transition(State::WAITING_PASS);
-      return;
-  }
+  if (!delivery_active && world.wiegand_granted &&
+      world.wiegand_access.type != AccessType::NONE) {
 
-  // Se o disparo de acesso já veio do KeypadHandler (via PhysicalState)
-  if (!delivery_active && world.access_granted && world.authorized_access.type != AccessType::NONE) {
-    AccessType atype = world.authorized_access.type;
+    AccessType atype = world.wiegand_access.type;
 
     if (atype == AccessType::RESIDENT) {
       _ctx.resident_access_type = atype;
-      strlcpy(_ctx.resident_label, world.authorized_access.label, sizeof(_ctx.resident_label));
+      strlcpy(_ctx.resident_label, world.wiegand_access.label, sizeof(_ctx.resident_label));
       if (!world.p2_open) { // interbloqueio
         Strike::P1().open(cfg.door_open_ms);
         Buzzer::beep(2, 150);
@@ -85,6 +79,25 @@ void StateMachine::tick(const PhysicalState& world) {
         transition(State::RESIDENT_P1);
       } else {
         UsbBridge::instance().sendAlert("RESIDENT_INTERLOCK_P2", _ctx);
+      }
+      return;
+    }
+
+    if (atype == AccessType::REVERSE_CORREIOS ||
+        atype == AccessType::REVERSE_ML       ||
+        atype == AccessType::REVERSE_AMAZON   ||
+        atype == AccessType::REVERSE_GENERIC) {
+      strlcpy(_ctx.reverse_carrier,
+        atype == AccessType::REVERSE_CORREIOS ? "CORREIOS" :
+        atype == AccessType::REVERSE_ML       ? "ML"       :
+        atype == AccessType::REVERSE_AMAZON   ? "AMAZON"   : "GENERIC",
+        sizeof(_ctx.reverse_carrier));
+      _ctx.weight_g = world.weight_g;
+      if (!world.p2_open) {
+        Strike::P1().open(cfg.door_open_ms);
+        Buzzer::beep(1, 100);
+        transition(State::AUTHORIZED);
+        _ctx.carrier[0] = 'R'; // flag: 'R' = reversa
       }
       return;
     }
@@ -105,7 +118,6 @@ void StateMachine::tick(const PhysicalState& world) {
     case State::MAINTENANCE:  _handleMaintenance(world);  break;
     case State::AWAKE:        _handleAwake(world);        break;
     case State::WAITING_QR:   _handleWaitingQr(world);    break;
-    case State::WAITING_PASS: _handleWaitingPass(world);  break;
     case State::AUTHORIZED:   _handleAuthorized(world);   break;
     case State::INSIDE_WAIT:  _handleInsideWait(world);   break;
     case State::DELIVERING:   _handleDelivering(world);   break;
@@ -174,27 +186,6 @@ void StateMachine::_handleWaitingQr(const PhysicalState& w) {
     strlcpy(_ctx.carrier, w.carrier, sizeof(_ctx.carrier));
     transition(State::AUTHORIZED);
   }
-}
-
-void StateMachine::_handleWaitingPass(const PhysicalState& w) {
-  auto& cfg = ConfigManager::instance().cfg;
-
-  // Timeout de digitação (10s sem atividade)
-  if (millis() - _ctx.state_enter > 10000) {
-      UsbBridge::instance().sendEvent("PASSWORD_TIMEOUT", _ctx);
-      transition(State::IDLE);
-      return;
-  }
-
-  // Se o Keypad processou o '#' sem sucesso no AccessController
-  if (w.keypad_done && !w.access_granted) {
-      Buzzer::beep(3, 100);
-      UsbBridge::instance().sendAlert("ACCESS_DENIED", _ctx);
-      transition(State::IDLE);
-      return;
-  }
-
-  // O tick() principal cuida da transição para RESIDENT_P1 se world.access_granted for true
 }
 
 void StateMachine::_handleAuthorized(const PhysicalState& w) {

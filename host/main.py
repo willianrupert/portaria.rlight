@@ -1,71 +1,125 @@
 import time
-import asyncio
-import uvicorn
+import uuid
 import os
+from core.config import config, dynamic_texts
 from core.machine_state import host_fsm
 from core.serial_bridge import esp32_bridge
-from local_api import app
-from websocket_manager import ws_manager
+from core.db import db_manager
+from ui.window import display_manager
+from ui.websocket_manager import ws_manager
+from integrations.homeassistant import ha_integration
+from integrations.camera_usb import webcam
+from integrations.oracle_api import oracle_api
 
-def set_display_power(on: bool):
-    """Controla o backlight da tela via sysfs."""
-    val = "0" if on else "1"
-    print(f"[Hardware] Display Power: {'ON' if on else 'OFF'}")
-    os.system(f"echo {val} | sudo tee /sys/class/backlight/*/bl_power > /dev/null 2>&1")
+try:
+    import sdnotify
+    systemd_notifier = sdnotify.SystemdNotifier()
+except ImportError:
+    systemd_notifier = None
 
-# Armazenamos o loop principal para referência externa
-main_loop = None
+def broadcast_ui_config():
+    """Envia configurações dinâmicas para o frontend."""
+    ws_manager.broadcast_sync({
+        "type": "config_update",
+        "endereco": dynamic_texts.ENDERECO_TEXT,
+        "recebedores": dynamic_texts.NOMES_RECEBEDORES,
+        "telefone_contato": dynamic_texts.TELEFONE_CONTATO,
+        "msg_erro": dynamic_texts.MSG_ERRO,
+        "msg_door_alert": dynamic_texts.MSG_DOOR_ALERT
+    })
 
 def on_state_transition(new_state, old_state):
-    """Hook reativo disparado pela thread Serial."""
+    """Hook chamado sempre que a FSM do microcontrolador mudar."""
     print(f"[Core FSM] Transição: {old_state} -> {new_state}")
     
-    payload = {
-        "event": "STATE_TRANSITION",
-        "state": new_state,
-        "old_state": old_state,
-        "ts": int(time.time()),
-        "weight": host_fsm.get_weight(),
-        "jwt": host_fsm.get_jwt()
-    }
-    
-    if main_loop and main_loop.is_running():
-        # Agenda o broadcast no loop do FastAPI
-        main_loop.call_soon_threadsafe(
-            lambda: asyncio.create_task(ws_manager.broadcast(payload))
-        )
-    
-    if new_state == "IDLE":
-        set_display_power(False)
-    elif old_state == "IDLE":
-        set_display_power(True)
-    
+    # Gerenciamento de Energia da Tela FÍSICA
+    if new_state in ["IDLE", "MAINTENANCE"]:
+        display_manager.dpms_control(False)
+    else:
+        display_manager.dpms_control(True)
+
+    # Lógica de Inicialização Local
     if new_state == "AWAKE":
         esp32_bridge.send_cmd("SCREEN_READY")
+        
+    elif new_state == "CONFIRMING" and old_state != "CONFIRMING":
+        webcam.capture_snapshot()
+        
+    photo_url = ""
+    jwt_token = host_fsm.get_jwt()
 
-async def run_server():
-    global main_loop
-    main_loop = asyncio.get_running_loop()
-    
-    config = uvicorn.Config(app, host="0.0.0.0", port=8080, log_level="info")
-    server = uvicorn.Server(config)
-    await server.serve()
+    if new_state == "RECEIPT":
+        # S8: Salvar foto e SQLite, retornando a URL pro WebSocket
+        raw_surface = webcam.get_last_surface()
+        weight_g = host_fsm.get_weight()
+        
+        if jwt_token:
+            token_uuid = str(uuid.uuid4())[:8]
+            photo_dir = "/tmp/rlight_photos" # folder2ram (Zero-write)
+            photo_path = os.path.join(photo_dir, f"{token_uuid}.jpg")
+            photo_url = f"/photos/{token_uuid}.jpg"
+            
+            if raw_surface:
+                import pygame # Importamos pygame localmente apenas se formos gravar arquivo de raw_surface? Mas peraí... raw_surface é pygame.Surface!
+                pygame.image.save(raw_surface, photo_path)
+            else:
+                photo_path = ""
+                photo_url = ""
+                
+            print(f"[Sync] Enfileirando entrega {token_uuid} no SQLite local.")
+            db_manager.insert_delivery(
+                token_uuid=token_uuid,
+                ts=int(time.time()),
+                jwt=jwt_token,
+                weight_g=weight_g,
+                carrier="UNKNOWN", 
+                photo_path=photo_path
+            )
+
+    # Envia evento de mudança de estado para o navegador Kiosk
+    ws_manager.broadcast_sync({
+        "type": "state_change",
+        "state": new_state,
+        "jwt": jwt_token,
+        "photo_url": photo_url,
+        "weight_g": host_fsm.get_weight(),
+        "carrier": host_fsm.get_carrier(),
+        "resident_label": host_fsm.get_resident_label()
+    })
 
 def main():
     print("========================================")
-    print(" RLight Portaria Digital v7 - Web Host  ")
+    print(" RLight Portaria Digital v7 - Host OPi  ")
+    print(" Arquitetura Web SPA Kiosk              ")
     print("========================================")
-
-    set_display_power(True)
+    
+    if systemd_notifier:
+        systemd_notifier.notify("READY=1")
+    
+    ha_integration.start()
+    oracle_api.start_sync_worker() 
     host_fsm.subscribe(on_state_transition)
     esp32_bridge.start()
-
+    
+    running = True
+    tick_count = 0
     try:
-        asyncio.run(run_server())
+        while running:
+            if systemd_notifier:
+                systemd_notifier.notify("WATCHDOG=1")
+            
+            # Broadcast periódico de configs para garantir sincronia na UI Web
+            if tick_count % 20 == 0:  # 20 * 0.05s = 1 segundo
+                broadcast_ui_config()
+                
+            tick_count += 1
+            time.sleep(0.05)
+            
     except KeyboardInterrupt:
-        print("[Shutdown] Encerrando...")
-    finally:
-        esp32_bridge.stop()
+        print("[Shutdown] Interrompido pelo usuário.")
+        
+    print("[Shutdown] Desligando módulos...")
+    esp32_bridge.stop()
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=600, height=1024, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>rlight UI - Kiosk Vertical</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background Animado (Camadas 1, 2, 3) -->
+    <div id="bg-layer" class="bg-layer">
+        <div class="blob blob-green" id="bg-blob-1"></div>
+        <div class="blob blob-blue" id="bg-blob-2"></div>
+        <svg class="noise-overlay" viewBox="0 0 600 1024" preserveAspectRatio="none">
+            <filter id="noiseFilter">
+                <feTurbulence type="fractalNoise" baseFrequency="0.6" stitchTiles="stitch"/>
+            </filter>
+            <rect width="100%" height="100%" filter="url(#noiseFilter)"/>
+        </svg>
+        <div class="glass-layer"></div>
+    </div>
+
+    <!-- HUD Global -->
+    <header id="global-hud">
+        <div class="hud-left">
+            <span class="logo-text">rlight</span>
+        </div>
+        <div class="hud-center">
+            <span id="ui-hud-state" class="state-label"></span>
+        </div>
+        <div class="hud-right">
+            <div id="ui-online-dot" class="status-dot"></div>
+            <div class="time-block">
+                <div class="clock"><span id="ui-clock-hm">00:00</span><span id="ui-clock-s">:00</span></div>
+                <div id="ui-date" class="date-label">SEG, 01 JAN</div>
+            </div>
+        </div>
+    </header>
+
+    <main id="app-container">
+
+        <!-- 1: IDLE -->
+        <section id="screen-IDLE" class="screen">
+            <div class="idle-content">
+                <h1 class="hero-logo">rlight</h1>
+                <div class="pulse-dot"></div>
+            </div>
+        </section>
+
+        <!-- 2 & 3: AWAKE & WAITING_QR -->
+        <section id="screen-AWAKE" class="screen">
+            <div class="split-layout">
+                <div class="top-third">
+                    <p id="ui-endereco" class="address-text">Rua Hermes da Fonseca, 315 — CEP 54400-333</p>
+                    <p class="body-text mt-4">Recebedores autorizados:</p>
+                    <h2 id="ui-recebedores" class="resident-names">Willian Rupert · Maria Aparecida</h2>
+                </div>
+                
+                <div class="mid-third text-center">
+                    <h1 class="main-title">LEIA O CÓDIGO DO PACOTE</h1>
+                    <p class="body-text secondary">Aproxime a etiqueta de rastreio abaixo</p>
+                </div>
+
+                <div class="bottom-third">
+                    <div id="qr-arrow-group" class="action-arrow-group">
+                        <svg class="arrow-icon pulse-arrow-diag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="13 17 18 12 13 7"></polyline>
+                            <polyline points="6 17 11 12 6 7"></polyline>
+                        </svg>
+                        <span class="caption yellow">Leitor aqui</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Timer fixo no bottom part de AWAKE/WAITING_QR -->
+            <div class="progress-footer">
+                <span id="ui-awake-timer-text" class="caption secondary mb-2 text-center">Aguardando leitura · 30s</span>
+                <div class="progress-track">
+                    <div id="ui-awake-progress" class="progress-bar yellow" style="width: 100%"></div>
+                </div>
+            </div>
+            
+            <!-- Shimmer strip for WAITING_QR -->
+            <div id="shimmer-scanner" class="shimmer-strip"></div>
+        </section>
+
+        <!-- 4: AUTHORIZED -->
+        <section id="screen-AUTHORIZED" class="screen centered">
+            <div class="success-circle pop-in">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <h1 class="success-title mt-4 fade-in-delay-1">ACESSO LIBERADO</h1>
+            <p id="ui-authorized-carrier" class="caption tertiary fade-in-delay-2 mb-8"></p>
+            
+            <div class="instruction-group mt-10">
+                <svg class="arrow-icon pulse-right white-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                <h2 class="body-text font-500 mt-4">Empurre a porta</h2>
+                <p class="caption secondary">A fechadura está desbloqueada</p>
+            </div>
+
+            <!-- Absolute positioned radial timer -->
+            <div class="radial-timer top-right">
+                <svg viewBox="0 0 36 36"><path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /><path id="auth-radial" class="circle-fill green" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /></svg>
+            </div>
+        </section>
+
+        <!-- 5: INSIDE_WAIT -->
+        <section id="screen-INSIDE_WAIT" class="screen centered">
+            <div class="bounce-box mt-4">📦</div>
+            <h1 class="main-title mt-4">Coloque o pacote na balança</h1>
+            <p class="body-text secondary">Qualquer posição da plataforma</p>
+            
+            <div class="glass-card mt-10">
+                <span class="caption tertiary">PESO DETECTADO</span>
+                <div class="weight-display"><span id="ui-inside-weight">—</span></div>
+                <div class="progress-track mt-4"><div id="ui-inside-weight-bar" class="progress-bar green" style="width: 0%"></div></div>
+            </div>
+
+            <div class="progress-footer mt-auto">
+                <span class="caption tertiary mb-2 text-center">Tempo restante para depósito</span>
+                <div class="progress-track">
+                    <div id="ui-inside-timer-bar" class="progress-bar orange" style="width: 100%"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6: DELIVERING -->
+        <section id="screen-DELIVERING" class="screen centered">
+            <div class="glass-card success-card mt-4">
+                <span class="caption green spaced">PACOTE REGISTRADO</span>
+                <div class="weight-display mt-2"><span id="ui-delivering-weight">0.0 kg</span></div>
+            </div>
+            
+            <div class="instruction-group mt-12 mb-8">
+                <svg class="arrow-icon pulse-left yellow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <h2 class="main-title mt-4">Saia e feche a porta</h2>
+                <p class="body-text secondary">O recibo será gerado automaticamente</p>
+            </div>
+            
+            <div class="pill orange-pill">
+                <span class="caption orange">⚠ Não feche antes de sair do corredor</span>
+            </div>
+        </section>
+
+        <!-- 7: DOOR_REOPENED -->
+        <section id="screen-DOOR_REOPENED" class="screen centered">
+            <div class="icon-xl secondary-color mb-4">🚪</div>
+            <h1 class="title fw-400 secondary-color">Aguardando saída...</h1>
+            <p class="body-text tertiary-color">Feche a porta completamente</p>
+            
+            <div id="ui-mmwave-indicator" class="pill orange-pill mt-8">
+                <span class="caption orange">● Presença detectada</span>
+            </div>
+        </section>
+
+        <!-- 8: CONFIRMING -->
+        <section id="screen-CONFIRMING" class="screen centered">
+            <div class="ios-spinner mb-6"></div>
+            <h1 class="body-text fw-400 text-primary">Gerando comprovante</h1>
+            <p class="caption secondary mt-2">Registrando peso e assinatura criptográfica</p>
+            
+            <div class="steps-group mt-12 text-left">
+                <div class="step-item" id="step-1"><span class="step-icon">○</span> <span class="step-text">Estabilizando balança...</span></div>
+                <div class="step-item mt-4" id="step-2"><span class="step-icon">○</span> <span class="step-text">Capturando imagem...</span></div>
+                <div class="step-item mt-4" id="step-3"><span class="step-icon">○</span> <span class="step-text">Assinando token...</span></div>
+            </div>
+        </section>
+
+        <!-- 9: RECEIPT (Vertical Stack Layout) -->
+        <section id="screen-RECEIPT" class="screen">
+            <div class="receipt-header text-center mt-8">
+                <h1 class="main-title">Entrega registrada</h1>
+                <p class="body-text secondary mt-2">Fotografe o código abaixo para o seu comprovante</p>
+            </div>
+
+            <div class="receipt-stack mt-8">
+                <div class="receipt-panel photo-panel">
+                    <img id="ui-photo" src="" alt="Snapshot" class="preview-img hidden">
+                    <div class="photo-info mt-4">
+                        <div id="ui-carrier-pill" class="pill mb-2"><span class="caption">via DESCONHECIDA</span></div>
+                        <p id="ui-receipt-weight" class="body-text secondary">0.0 kg</p>
+                        <p id="ui-receipt-time" class="caption tertiary mt-1"></p>
+                    </div>
+                </div>
+
+                <div class="receipt-separator"></div>
+
+                <div class="receipt-panel qr-panel">
+                    <div id="ui-qrcode-container" class="qr-box"></div>
+                    <p class="caption tertiary spaced mt-4 text-center">COMPROVANTE DIGITAL</p>
+                    <p class="caption blue mt-1 text-center">portaria.rlight.com.br</p>
+                    <p id="ui-receipt-token" class="mono-text tertiary mt-1 text-center"></p>
+                </div>
+            </div>
+
+            <div class="progress-footer mt-auto">
+                <span class="caption tertiary mb-2 text-center">Esta tela fecha automaticamente</span>
+                <div class="progress-track"><div id="ui-receipt-timer-bar" class="progress-bar blue" style="width: 100%"></div></div>
+            </div>
+        </section>
+
+        <!-- 10: ABORTED -->
+        <section id="screen-ABORTED" class="screen centered">
+            <div class="icon-xl tertiary-color mb-4">○</div>
+            <h1 class="title fw-400 secondary-color">Nenhum pacote registrado</h1>
+            <p class="body-text tertiary-color">O ciclo foi encerrado sem depósito</p>
+        </section>
+
+        <!-- 11: RESIDENT_P1 -->
+        <section id="screen-RESIDENT_P1" class="screen centered">
+            <h1 class="title fw-300">Bem-vindo</h1>
+            <h2 id="ui-resident-name" class="hero-text green mt-2">Willian</h2>
+            
+            <div class="instruction-group mt-12 mb-8">
+                <svg class="arrow-icon pulse-right white-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                <h2 class="body-text mt-4">Entre e deixe a porta fechar</h2>
+            </div>
+            
+            <div class="glass-card mt-8 flex-row align-center">
+                <span class="icon-lg mr-4">🔓</span>
+                <div class="text-left">
+                    <p class="body-text secondary">A porta interna abrirá automaticamente</p>
+                    <p class="caption tertiary mt-1">Aguarde dentro do corredor</p>
+                </div>
+            </div>
+
+            <div class="radial-timer top-right">
+                <svg viewBox="0 0 36 36"><path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /><path id="res-p1-radial" class="circle-fill green" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /></svg>
+            </div>
+        </section>
+
+        <!-- 12: RESIDENT_P2 -->
+        <section id="screen-RESIDENT_P2" class="screen centered">
+            <div class="radial-timer-lg mb-8">
+                <svg viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="54" class="circle-bg blue-bg" />
+                    <circle id="res-p2-radial" cx="60" cy="60" r="54" class="circle-fill blue stroke-width-3" stroke-dasharray="339.29" stroke-dashoffset="339.29" transform="rotate(-90 60 60)" />
+                </svg>
+                <div id="p2-lock-icon" class="timer-icon absolute-center">🔒</div>
+            </div>
+            <h1 id="p2-status-text" class="title fw-300 secondary-color">Aguarde...</h1>
+            <p class="caption tertiary mt-4">Verificando segurança da passagem</p>
+        </section>
+
+        <!-- 13: REVERSE_PICKUP -->
+        <section id="screen-REVERSE_PICKUP" class="screen centered">
+            <div class="pill purple-pill mb-4"><span class="caption purple">COLETA REVERSA</span></div>
+            <h1 id="ui-reverse-carrier" class="title mb-10">Transportadora</h1>
+            
+            <div class="instruction-group mb-12">
+                <svg class="arrow-icon pulse-left white-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <p class="body-text mt-4">Retire o pacote e saia</p>
+            </div>
+            
+            <div class="glass-card mb-auto">
+                <span class="caption tertiary">Variação detectada</span>
+                <h1 id="ui-reverse-delta" class="title purple mt-2">Δ 0.0 kg</h1>
+            </div>
+            
+            <div class="progress-footer mt-auto">
+                <div class="progress-track"><div id="ui-reverse-timer-bar" class="progress-bar orange" style="width: 100%"></div></div>
+            </div>
+        </section>
+
+        <!-- 14: DOOR_ALERT -->
+        <section id="screen-DOOR_ALERT" class="screen centered">
+            <div class="ring-pulse mb-8 warning-ring">
+                <span class="icon-xl red-color">⚠</span>
+            </div>
+            <h1 class="hero-text red-color spaced">PORTA ABERTA</h1>
+            <p class="title secondary-color mt-4">Feche a porta imediatamente</p>
+            
+            <h2 id="ui-door-alert-time" class="title fw-200 orange-color mt-8">Aberta há: 00:00</h2>
+            
+            <div class="glass-card mt-auto mb-10">
+                <p id="ui-msg-door-alert" class="body-text secondary text-center"></p>
+            </div>
+        </section>
+
+        <!-- 15: MAINTENANCE -->
+        <section id="screen-MAINTENANCE" class="screen centered">
+            <div class="icon-xl yellow-color mb-4">🔧</div>
+            <h1 class="title yellow-color">Modo Manutenção</h1>
+            <p class="body-text secondary mt-2 mb-10">Operações desabilitadas temporariamente</p>
+            
+            <div class="health-grid mb-10">
+                <div class="health-item"><span class="caption">QR</span><span class="dot green-dot"></span></div>
+                <div class="health-item"><span class="caption">Balança</span><span class="dot green-dot"></span></div>
+                <div class="health-item"><span class="caption">Radar</span><span class="dot green-dot"></span></div>
+                <div class="health-item"><span class="caption">Corrente P1</span><span class="dot green-dot"></span></div>
+                <div class="health-item"><span class="caption">Corrente P2</span><span class="dot green-dot"></span></div>
+                <div class="health-item"><span class="caption">Acesso</span><span class="dot green-dot"></span></div>
+            </div>
+            
+            <p id="ui-health-score" class="body-text">Score: 100/100</p>
+            <p class="caption tertiary mt-auto mb-10 text-center">Para sair do modo manutenção, desative no Home Assistant</p>
+        </section>
+
+        <!-- 16: ERROR -->
+        <section id="screen-ERROR" class="screen centered">
+            <div class="hex-badge red-badge mb-6 shake-anim">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </div>
+            <h1 class="title red-color mb-4">Falha no sistema</h1>
+            <div class="mono-text padding-sm bg-darken tertiary-color border-radius-sm mb-12" id="ui-error-code">SYSTEM_FAIL</div>
+            
+            <p id="ui-msg-erro" class="body-text mb-12 px-6 text-center">ERRO DE LEITURA. Toque na campainha abaixo.</p>
+            
+            <div class="instruction-group mt-auto mb-10">
+                <svg class="arrow-icon bounce-down yellow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13"></polyline><polyline points="7 6 12 11 17 6"></polyline></svg>
+                <p class="caption yellow mt-4">Aperte a campainha</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Fallback Popup (WAITING_QR timeout) -->
+    <div id="fallback-popup" class="glass-popup slide-up hidden">
+        <p class="body-text secondary">Não está conseguindo?</p>
+        <p class="caption tertiary mt-1">Use o interfone ou ligue</p>
+        <div class="phone-group mt-4 mb-4 flex-row align-center">
+            <span class="icon-md blue-color mr-2">☎</span>
+            <h1 id="ui-telefone" class="title font-600 blue-color">(81) 9999-9999</h1>
+        </div>
+        <button id="btn-interfone" class="ghost-btn blue-btn">Chamar interfone</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/lib/qrcode.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

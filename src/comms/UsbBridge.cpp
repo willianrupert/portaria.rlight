@@ -75,21 +75,21 @@ void UsbBridge::_dispatch(const char* raw) {
       }
     }
   }
-  else if (!strcmp(cmd, "CMD_SET_MASTER_PASS")) {
-    const char* pass = doc["pass"] | "020304";
-    bool ok = AccessController::instance().setMasterPassword(pass);
-    if(ok) sendEvent("MASTER_PASS_SET", fsm.ctx());
+  else if (!strcmp(cmd, "CMD_ADD_WIEGAND_CODE")) {
+    uint32_t code  = doc["code"].as<uint32_t>();
+    const char* tl = doc["type_label"] | "RESIDENT:Morador";
+    bool ok = AccessController::instance().addCode(code, tl);
+    if(ok) sendEvent("WIEGAND_CODE_ADDED", fsm.ctx());
   }
-  else if (!strcmp(cmd, "CMD_ADD_REV_PASS")) {
-    const char* alias = doc["alias"] | "GENERIC";
-    const char* pass  = doc["pass"]  | "";
-    bool ok = AccessController::instance().addReversePassword(alias, pass);
-    if(ok) sendEvent("REV_PASS_ADDED", fsm.ctx());
+  else if (!strcmp(cmd, "CMD_REMOVE_WIEGAND_CODE")) {
+    uint32_t code = doc["code"].as<uint32_t>();
+    bool ok = AccessController::instance().removeCode(code);
+    if(ok) sendEvent("WIEGAND_CODE_REMOVED", fsm.ctx());
   }
-  else if (!strcmp(cmd, "CMD_REMOVE_REV_PASS")) {
-    const char* alias = doc["alias"] | "";
-    bool ok = AccessController::instance().removeReversePassword(alias);
-    if(ok) sendEvent("REV_PASS_REMOVED", fsm.ctx());
+  else if (!strcmp(cmd, "CMD_LIST_WIEGAND_CODES")) {
+    char buf[512];
+    AccessController::instance().listCodes(buf, sizeof(buf));
+    sendEvent("WIEGAND_CODE_LIST", fsm.ctx());
   }
   else if (!strcmp(cmd, "CMD_UNLOCK_P1")) {
     fsm.transition(State::AUTHORIZED);

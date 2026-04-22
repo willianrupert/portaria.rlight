@@ -33,7 +33,9 @@ class DynamicTexts:
     def __init__(self):
         self.ENDERECO_TEXT = "Rua Hermes da Fonseca, 315, CEP 54400-333"
         self.NOMES_RECEBEDORES = "Willian Rupert, Maria Aparecida"
-        self.MSG_ERRO: str = "ERRO DE LEITURA. Toque na campainha abaixo ou chame no WhatsApp (81) 9999-9999"
+        self.TELEFONE_CONTATO = "(81) 9999-9999"
+        self.MSG_ERRO = "ERRO DE LEITURA. Toque na campainha abaixo ou chame no WhatsApp (81) 9999-9999"
+        self.MSG_DOOR_ALERT = "Se você não está no corredor, acesse o Home Assistant"
 
 dynamic_texts = DynamicTexts()
 

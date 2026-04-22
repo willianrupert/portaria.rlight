@@ -2,7 +2,6 @@ import serial
 import json
 import threading
 import time
-import traceback
 from .machine_state import host_fsm
 from .config import config
 
@@ -54,9 +53,7 @@ class SerialBridge:
                 self.ser = None
                 time.sleep(1)
             except Exception as e:
-                print(f"[Serial Loop Fatal] Ocorreu um erro no loop de leitura:")
-                traceback.print_exc()
-                time.sleep(2)
+                print(f"[Serial Loop Fatal] {e}")
 
     def send_cmd(self, cmd_name: str, args: dict = None):
         """Envia comandos para o ESP32 (`AWAKE`, `CMD_SYNC_TIME`, `CMD_UNLOCK_P2`)"""

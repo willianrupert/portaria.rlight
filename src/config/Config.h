@@ -6,7 +6,8 @@
 #define PIN_USB_D_PLUS      20
 #define PIN_UART0_RX        44   // GM861S — RX
 #define PIN_UART0_TX        43   // GM861S — TX
-#define PIN_KEYPAD_INT       6   // Novo: Interrupção PCF8574
+#define PIN_WIEGAND_D0       1   // Remapeado (Antigo 6)
+#define PIN_WIEGAND_D1       2   // Remapeado (Antigo 7)
 #define PIN_UART1_RX        18   // mmWave
 #define PIN_UART1_TX        17   // mmWave
 #define PIN_I2C_SDA         21   // Remapeado (Antigo 1)
@@ -29,8 +30,6 @@
 #define HEALTH_REPORT_MS    60000
 #define NTP_SYNC_INTERVAL   600000  // 10 min
 #define TS_SANITY_MIN  1700000000UL  // Nov/2023 — rejeita RTC morto
-#define I2C_ADDR_KEYPAD      0x20
-#define I2C_ADDR_INA219      0x40
 
 // ── BUFFER SIZES (stack — zero heap) ────────────────────────────────
 #define UART_RX_BUF_SIZE    512
@@ -41,7 +40,7 @@
 
 // ── SCORE PESOS DE SAÚDE (Total 100) ─────────────────────────────────
 #define SCORE_GM861          25
-#define SCORE_KEYPAD         25
+#define SCORE_WIEGAND        25
 #define SCORE_HX711          20
 #define SCORE_MMWAVE         15
 #define SCORE_INA219_P1      10

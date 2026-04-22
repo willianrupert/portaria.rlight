@@ -10,11 +10,8 @@ struct AccessGranted {
 };
 
 struct PhysicalState {
-  bool          access_granted   = false;
-  AccessGranted authorized_access = {};
-  bool          keypad_active    = false;
-  uint8_t       keypad_digits    = 0;
-  bool          keypad_done      = false;
+  bool          wiegand_granted  = false;
+  AccessGranted wiegand_access   = {};
   float    weight_g        = 0.0f;
   char     qr_code[64]     = "";
   char     carrier[24]     = "";
