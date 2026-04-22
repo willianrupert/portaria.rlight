@@ -14,21 +14,26 @@ Você é o engenheiro principal focado na transição da V6 para a V7 do firmwar
   - Dois Strikes separando as lógicas (P1 para entrega/reversa, P2 exclusivo para morador).
   - Nova Interface Gráfica (1024x600 IPS).
 
-## 3. Diretrizes da Interface (Web UI)
-- **Resolução:** 1024x600 Horizontal.
-- **Ecossistema:** "Apple Style", moderno, minimalista, *glassmorphism*, tipografia limpa (Google Fonts: Inter ou Outfit).
-- **Gerenciamento de Energia:** A tela IPS fica DESTRIGADA (apagada) no estado IDLE.
-- **Editabilidade:** Os componentes e mensagens (ex: `dynamic_texts` ou templates de HA) devem ser passíveis de alteração pelo Home Assistant via MQTT e propagação para o front-end. O front-end usa HTLM/CSS limpos e otimizados para SBCs de baixa potência.
+## 3. Diretrizes da Interface (Web UI v7)
+- **Orientação:** Vertical (Portrait) — otimizada para 600x1024.
+- **Ecossistema:** "Apple Style", moderno, minimalista, *glassmorphism*, tipografia SF Pro/Inter.
+- **HUD Global:** Cabeçalho persistente com Relógio, Data, Status de Rede e Nome do Estado.
+- **Gerenciamento de Energia:** A tela IPS fica DESTRIGADA (apagada) no estado IDLE e MAINTENANCE via DPMS.
+- **Editabilidade:** Mensagens dinâmicas (`ENDERECO_TEXT`, `NOMES_RECEBEDORES`, `MSG_ERRO`, `MSG_DOOR_ALERT`) injetadas via WebSocket, permitindo controle total pelo Home Assistant sem re-deploy.
 
 ## 4. Histórico de Versões & Progresso
-- **[ ] Migração de UI (Pygame -> Web):** 
-  - Substituir o uso de `pygame` e `kmsdrm` do arquivo `host/main.py`.
-  - Criar um frontend HTML/CSS/JS desacoplado, que se comunicará via WebSockets/API com o host Python FastAPI (`local_api.py`).
-  - Executar o navegador Chromium em modo Kiosk apontado para a interface servida.
-- **[ ] Atualização Firmware ESP32-S3 (v7):**
-  - Integração do sensor Wiegand.
-  - Lógica P1 + P2.
-  - Rate limiting e cooldown.
+- **[x] Migração de UI (Pygame -> Web):** 
+  - [x] Substituído `pygame` por SPA Web moderna (HTML/CSS/JS).
+  - [x] Implementadas as 16 telas baseadas no `rlight_ui_spec.md`.
+  - [x] Comunicação reativa via WebSockets (`/ui/stream`) com o host Python.
+  - [x] Design refeito para orientação Vertical (Portrait).
+- **[x] Atualização Firmware ESP32-S3 (v7):**
+  - [x] Integração do sensor Wiegand/TF9S.
+  - [x] Lógica de intertravamento P1 + P2 (Dois Strikes).
+  - [x] Broadcast de telemetria estendida (Carrier, Resident Label).
+- **[x] Deploy e Repositório:**
+  - [x] Git inicializado e linkado ao repositório remoto oficial.
+  - [x] Push realizado com sucesso.
 
 ---
 *Regras do Agente:* Atualize este arquivo sempre que um novo marco arquitetural for superado ou uma nova restrição técnica descobrir-se.
