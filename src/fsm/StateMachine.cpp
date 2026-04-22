@@ -64,14 +64,14 @@ void StateMachine::tick(const PhysicalState& world) {
                           _ctx.state == State::RECEIPT      ||
                           _ctx.state == State::REVERSE_PICKUP);
 
-  if (!delivery_active && world.wiegand_granted &&
-      world.wiegand_access.type != AccessType::NONE) {
+  if (!delivery_active && world.keypad_granted &&
+      world.keypad_access.type != AccessType::NONE) {
 
-    AccessType atype = world.wiegand_access.type;
+    AccessType atype = world.keypad_access.type;
 
     if (atype == AccessType::RESIDENT) {
       _ctx.resident_access_type = atype;
-      strlcpy(_ctx.resident_label, world.wiegand_access.label, sizeof(_ctx.resident_label));
+      strlcpy(_ctx.resident_label, world.keypad_access.label, sizeof(_ctx.resident_label));
       if (!world.p2_open) { // interbloqueio
         Strike::P1().open(cfg.door_open_ms);
         Buzzer::beep(2, 150);

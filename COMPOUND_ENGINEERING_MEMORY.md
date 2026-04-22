@@ -10,7 +10,7 @@ Você é o engenheiro principal focado na transição da V6 para a V7 do firmwar
 - **Hardwares Envolvidos:** ESP32-S3 (Firmware AMP em C++) + Orange Pi Zero 3 (Host Linux Python 3).
 - **Core Principle:** "Physics-first" -> hardware não bloqueante, FSM determinística.
 - **Novidades V7:** 
-  - Controle de Acesso via TF9S (Wiegand).
+  - Controle de Acesso via Teclado Matricial I2C (PCF8574).
   - Dois Strikes separando as lógicas (P1 para entrega/reversa, P2 exclusivo para morador).
   - Nova Interface Gráfica (1024x600 IPS).
 
@@ -28,7 +28,7 @@ Você é o engenheiro principal focado na transição da V6 para a V7 do firmwar
   - [x] Comunicação reativa via WebSockets (`/ui/stream`) com o host Python.
   - [x] Design refeito para orientação Vertical (Portrait).
 - **[x] Atualização Firmware ESP32-S3 (v7):**
-  - [x] Integração do sensor Wiegand/TF9S.
+  - [x] Integração do Teclado Matricial I2C (PCF8574).
   - [x] Lógica de intertravamento P1 + P2 (Dois Strikes).
   - [x] Broadcast de telemetria estendida (Carrier, Resident Label).
 - **[x] Deploy e Repositório:**

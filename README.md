@@ -36,7 +36,7 @@ Enquanto o mercado persegue modelos complexos de inteligência artificial basead
   - [x] Comunicação reativa via WebSockets (`/ui/stream`) com o host Python.
   - [x] Design refeito para orientação Vertical (Portrait).
 - **[x] Atualização Firmware ESP32-S3 (v7):**
-  - [x] Integração do sensor Wiegand/TF9S.
+  - [x] Integração do Teclado Matricial I2C (PCF8574).
   - [x] Lógica de intertravamento P1 + P2 (Dois Strikes).
   - [x] Broadcast de telemetria estendida (Carrier, Resident Label).
 - **[x] Deploy e Repositório:**
@@ -59,7 +59,7 @@ O estado do ambiente não é gerido por *flags* soltas booleanas. A classe modul
 8.  **`CONFIRMING`**: Processamento criptográfico e estabilização de carga.
 9.  **`RECEIPT`**: Exibição do snapshot da webcam e QR Code de validação.
 10. **`ABORTED`**: Ciclo encerrado sem depósito (neutro).
-11. **`RESIDENT_P1`**: Boas-vindas personalizada para moradores (via Wiegand).
+11. **`RESIDENT_P1`**: Boas-vindas personalizada para moradores (via Senha no Teclado).
 12. **`RESIDENT_P2`**: Intertravamento de segurança P1/P2 com timer visual.
 13. **`REVERSE_PICKUP`**: Fluxo de coleta com indicação de variação de peso negativa.
 14. **`DOOR_ALERT`**: Alerta vermelho crítico de porta esquecida aberta.

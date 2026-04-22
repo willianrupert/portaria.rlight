@@ -22,15 +22,15 @@ class AccessController {
 public:
   static AccessController& instance();
 
-  // Tenta validar um código Wiegand.
+  // Tenta validar um código de senha.
   // Retorna AccessResult com o tipo de acesso.
-  AccessResult validate(uint32_t wiegand_code);
+  AccessResult validate(const char* code);
 
   // Gerenciamento de códigos via comandos do HA (persistidos na NVS)
-  // key format: "wieg_{code_decimal}" → value: "RESIDENT:Willian" ou "REVERSE_ML:ML Coleta"
-  bool addCode(uint32_t code, const char* type_label);   // CMD_ADD_WIEGAND_CODE
-  bool removeCode(uint32_t code);                        // CMD_REMOVE_WIEGAND_CODE
-  void listCodes(char* out_buf, size_t buf_sz);          // CMD_LIST_WIEGAND_CODES
+  // key format: "key_{code}" → value: "RESIDENT:Willian" ou "REVERSE_ML:ML Coleta"
+  bool addCode(const char* code, const char* type_label);   // CMD_ADD_KEY_CODE
+  bool removeCode(const char* code);                        // CMD_REMOVE_KEY_CODE
+  void listCodes(char* out_buf, size_t buf_sz);             // CMD_LIST_KEY_CODES
 
   // Rate limiting: retorna true se pode tentar (não está em cooldown)
   bool canAttempt();

@@ -36,7 +36,7 @@ void AccessController::resetRateLimit() {
   _cooldown_until = 0;
 }
 
-AccessResult AccessController::validate(uint32_t code) {
+AccessResult AccessController::validate(const char* code) {
   AccessResult result;
 
   // Rate limiting: bloqueia se em cooldown
@@ -46,12 +46,12 @@ AccessResult AccessController::validate(uint32_t code) {
     return result;
   }
 
-  // Constrói chave NVS: "wieg_XXXXXXXX"
-  char key[20];
-  snprintf(key, sizeof(key), "wieg_%lu", (unsigned long)code);
+  // Constrói chave NVS: "key_XXXXXXXX"
+  char key[32];
+  snprintf(key, sizeof(key), "key_%s", code);
 
   Preferences p;
-  p.begin("wieg_db", true); // read-only
+  p.begin("access_db", true); // read-only
   char val[48] = "";
   p.getString(key, val, sizeof(val));
   p.end();
@@ -94,21 +94,21 @@ AccessResult AccessController::validate(uint32_t code) {
   return result;
 }
 
-bool AccessController::addCode(uint32_t code, const char* type_label) {
-  char key[20];
-  snprintf(key, sizeof(key), "wieg_%lu", (unsigned long)code);
+bool AccessController::addCode(const char* code, const char* type_label) {
+  char key[32];
+  snprintf(key, sizeof(key), "key_%s", code);
   Preferences p;
-  p.begin("wieg_db", false);
+  p.begin("access_db", false);
   size_t written = p.putString(key, type_label);
   p.end();
   return written > 0;
 }
 
-bool AccessController::removeCode(uint32_t code) {
-  char key[20];
-  snprintf(key, sizeof(key), "wieg_%lu", (unsigned long)code);
+bool AccessController::removeCode(const char* code) {
+  char key[32];
+  snprintf(key, sizeof(key), "key_%s", code);
   Preferences p;
-  p.begin("wieg_db", false);
+  p.begin("access_db", false);
   bool ok = p.remove(key);
   p.end();
   return ok;
