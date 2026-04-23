@@ -243,3 +243,48 @@ Versões de firmware do ESP32-S3, software do Orange Pi e interface web são num
 ### Added
 - **ESP32 (original) acionando relé.**
 - **Validação do airlock de duas portas.**
+
+---
+
+## Registro de Decisões de Arquitetura (ADR)
+
+### ADR-001: Física como dado, câmera como registro
+**Status:** Ativo desde v1.0.0
+Câmeras falham com iluminação. Física (peso, presença, corrente) não mente.
+
+### ADR-002: Air-gapped por design
+**Status:** Ativo desde v3.0.0
+ESP32-S3 tem WiFi/BT desligados permanentemente. Superfície de ataque zero.
+
+### ADR-003: Offline-first, nuvem como espelho
+**Status:** Ativo desde v2.0.0
+Assinatura JWT local. Nuvem Oracle é espelho de conveniência, não autoridade.
+
+### ADR-004: Wear-leveling ativo da NVS
+**Status:** Ativo desde v5.0.0
+Preservação da Flash: zero writes desnecessários na NVS/SD.
+
+---
+
+## Mapa de Componentes por Versão
+
+| Componente | v1 | v2 | v3 | v4 | v5 | v6 | v7 | v8 |
+|---|---|---|---|---|---|---|---|---|
+| ESP32-S3 N16R8 | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Orange Pi Zero 3 | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Strike P1/P2 | ✓/— | ✓/— | ✓/— | ✓/— | ✓/— | ✓/— | ✓/✓ | ✓/✓ |
+
+---
+
+## Glossário Técnico
+
+| Termo | Definição no contexto rlight |
+|---|---|
+| **AMP** | Asymmetric Multiprocessing — Core 0 (lógica) e Core 1 (sensores) |
+| **JWT** | JSON Web Token — comprovante criptográfico de entrega HMAC-SHA256 |
+| **NVS** | Non-Volatile Storage — armazenamento em Flash do ESP32 |
+
+---
+
+*rlight.com.br · Jaboatão dos Guararapes, Pernambuco, Brasil*
+*Construído com as próprias mãos, para durar.*
