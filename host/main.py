@@ -49,22 +49,11 @@ def on_state_transition(new_state, old_state):
     jwt_token = host_fsm.get_jwt()
 
     if new_state == "RECEIPT":
-        # S8: Salvar foto e SQLite, retornando a URL pro WebSocket
-        raw_surface = webcam.get_last_surface()
         weight_g = host_fsm.get_weight()
         
         if jwt_token:
             token_uuid = str(uuid.uuid4())[:8]
-            photo_dir = "/tmp/rlight_photos" # folder2ram (Zero-write)
-            photo_path = os.path.join(photo_dir, f"{token_uuid}.jpg")
-            photo_url = f"/photos/{token_uuid}.jpg"
-            
-            if raw_surface:
-                import pygame # Importamos pygame localmente apenas se formos gravar arquivo de raw_surface? Mas peraí... raw_surface é pygame.Surface!
-                pygame.image.save(raw_surface, photo_path)
-            else:
-                photo_path = ""
-                photo_url = ""
+            photo_url = webcam.capture_snapshot() or ""
                 
             print(f"[Sync] Enfileirando entrega {token_uuid} no SQLite local.")
             db_manager.insert_delivery(
@@ -73,7 +62,7 @@ def on_state_transition(new_state, old_state):
                 jwt=jwt_token,
                 weight_g=weight_g,
                 carrier="UNKNOWN", 
-                photo_path=photo_path
+                photo_path=photo_url
             )
 
     # Envia evento de mudança de estado para o navegador Kiosk
