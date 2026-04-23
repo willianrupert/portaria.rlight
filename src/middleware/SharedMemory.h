@@ -17,7 +17,9 @@ struct PhysicalState {
   char     carrier[24]     = "";
   bool     person_present  = false;
   bool     p1_open         = false;
-  bool     p2_open         = false;   // monitoramento apenas
+  bool     p2_open         = false;   // monitoramento reed switch
+  bool     gate_open       = false;   // monitoramento reed switch garen
+  bool     int_button_pressed = false; // botão interno P2
   float    ina_p1_ma       = 0.0f;
   float    ina_p2_ma       = 0.0f;    // P2 current monitor se tiver INA dual
   uint32_t last_updated_ms = 0;
