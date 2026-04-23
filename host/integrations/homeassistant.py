@@ -20,6 +20,7 @@ class HomeAssistantIntegration:
         
         # Tópicos HA->OPi (Comandos de Ação)
         self.CMD_TOPIC_P2 = f"rlight/{self.DEVICE_ID}/cmd_p2"
+        self.CMD_TOPIC_GATE = f"rlight/{self.DEVICE_ID}/cmd_gate"
         self.CMD_TOPIC_RELOAD = f"rlight/{self.DEVICE_ID}/cmd_reload_nvs"
         self.CMD_TOPIC_UNLOCK_RESIDENT = f"rlight/{self.DEVICE_ID}/cmd_unlock_resident"
         
@@ -31,6 +32,7 @@ class HomeAssistantIntegration:
         # Tópicos OPi->HA (Leituras / Status Real)
         self.STAT_TOPIC_FSM = f"rlight/{self.DEVICE_ID}/fsm_state"
         self.STAT_TOPIC_WEIGHT = f"rlight/{self.DEVICE_ID}/weight_g"
+        self.STAT_TOPIC_GATE = f"rlight/{self.DEVICE_ID}/gate_status"
         
     def start(self):
         try:
@@ -49,6 +51,7 @@ class HomeAssistantIntegration:
             
             # Se inscreve nos topicos de Comando/Texto vindo do H.A.
             client.subscribe(self.CMD_TOPIC_P2)
+            client.subscribe(self.CMD_TOPIC_GATE)
             client.subscribe(self.CMD_TOPIC_RELOAD)
             client.subscribe(self.CMD_TOPIC_UNLOCK_RESIDENT)
             client.subscribe(self.SET_TOPIC_ENDERECO)
@@ -64,6 +67,10 @@ class HomeAssistantIntegration:
         if topic == self.CMD_TOPIC_P2 and payload == "PRESS":
             print("[MQTT/HA] Abrir P2 Solicitado!")
             esp32_bridge.send_cmd("CMD_UNLOCK_P2")
+            
+        elif topic == self.CMD_TOPIC_GATE and payload == "PRESS":
+            print("[MQTT/HA] Abrir Portão Solicitado!")
+            esp32_bridge.send_cmd("CMD_UNLOCK_GATE")
             
         elif topic == self.CMD_TOPIC_UNLOCK_RESIDENT and payload == "PRESS":
             print("[MQTT/HA] Acesso Morador Remoto Solicitado!")
@@ -82,6 +89,8 @@ class HomeAssistantIntegration:
             self.client.publish(self.STAT_TOPIC_FSM, new_state, retain=True)
             weight = host_fsm.get_weight()
             self.client.publish(self.STAT_TOPIC_WEIGHT, str(weight), retain=False)
+            gate = "OPEN" if host_fsm.get_gate_open() else "CLOSED"
+            self.client.publish(self.STAT_TOPIC_GATE, gate, retain=False)
         except Exception:
             pass
 
@@ -101,6 +110,14 @@ class HomeAssistantIntegration:
         # Sensor - Peso
         s_peso = {"name": "Balança de Ocorrências", "state_topic": self.STAT_TOPIC_WEIGHT, "unique_id": f"{self.DEVICE_ID}_peso", "unit_of_measurement": "g", "device_class": "weight", "device": device_def}
         self.client.publish(f"{self.PREFIX}/sensor/{self.DEVICE_ID}/peso/config", json.dumps(s_peso), retain=True)
+
+        # Sensor - Gate Status
+        s_gate = {"name": "Status Portão", "state_topic": self.STAT_TOPIC_GATE, "unique_id": f"{self.DEVICE_ID}_gate", "device_class": "door", "device": device_def}
+        self.client.publish(f"{self.PREFIX}/binary_sensor/{self.DEVICE_ID}/gate/config", json.dumps(s_gate), retain=True)
+
+        # Button - Unlock Gate
+        b_gate = {"name": "Abrir Portão Garen", "command_topic": self.CMD_TOPIC_GATE, "payload_press": "PRESS", "unique_id": f"{self.DEVICE_ID}_unlock_gate", "icon": "mdi:gate", "device": device_def}
+        self.client.publish(f"{self.PREFIX}/button/{self.DEVICE_ID}/unlock_gate/config", json.dumps(b_gate), retain=True)
 
         # Button - Unlock Resident
         b_unlock = {"name": "Acesso Morador Remoto", "command_topic": self.CMD_TOPIC_UNLOCK_RESIDENT, "payload_press": "PRESS", "unique_id": f"{self.DEVICE_ID}_unlock_res", "icon": "mdi:door-open", "device": device_def}
