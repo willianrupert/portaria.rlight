@@ -1,48 +1,41 @@
 import cv2
 import threading
+import os
 from core.config import config
-import pygame
 
 class WebCamCapture:
-    """Acesso direto à WebCam Headless para garantir registro confiável na Base."""
+    """Acesso direto à WebCam Headless via OpenCV para tirar a foto oficial da entrega."""
     
     def __init__(self):
         self.lock = threading.Lock()
-        self.last_frame = None
-        self.last_surface = None
+        self.last_photo_path = os.path.join(os.path.dirname(__file__), "..", "ui", "web", "assets", "last_delivery.jpg")
+        
+        # Garante que a pasta assets existe
+        os.makedirs(os.path.dirname(self.last_photo_path), exist_ok=True)
 
-    def capture_snapshot(self) -> bytes:
-        """Abre a câmera em 1080p (se suportado), bate a foto e devolve o JPG e a Pygame Surface em cache."""
+    def capture_snapshot(self) -> str:
+        """Abre a câmera, tira a foto, salva no disco e retorna o caminho relativo para a UI."""
         with self.lock:
-            # Reabre a cada captura para não prender a interface USB
-            cap = cv2.VideoCapture(config.WEBCAM_ID)
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-            
-            # Descarta primeiros frames escuros da calibração auto-brightness do sensor
-            for _ in range(5):
-                cap.read()
+            try:
+                cap = cv2.VideoCapture(config.WEBCAM_ID)
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
                 
-            ret, frame = cap.read()
-            cap.release()
-
-            if ret:
-                # 1. Enviar para JPG para o Oracle Cloud
-                success, encoded_image = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
-                if success:
-                    self.last_frame = encoded_image.tobytes()
+                # Descarta os primeiros frames (ajuste automático de brilho/foco)
+                for _ in range(5):
+                    cap.read()
                     
-                # 2. Enviar para RGB Color pra o Pygame (TELA RECEIPT)
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                # Converter para Surface
-                self.last_surface = pygame.image.frombuffer(
-                    frame_rgb.tobytes(), frame_rgb.shape[1::-1], "RGB"
-                )
-                
-                return self.last_frame
-            return None
+                ret, frame = cap.read()
+                cap.release()
 
-    def get_last_surface(self):
-        return self.last_surface
+                if ret:
+                    # Salva no disco com qualidade otimizada para o recibo
+                    cv2.imwrite(self.last_photo_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+                    # Retorna o path relativo que o local_api (static) já serve para o front-end
+                    return "/ui/assets/last_delivery.jpg"
+                return None
+            except Exception as e:
+                print(f"[WebCam] Erro ao capturar snapshot: {e}")
+                return None
 
 webcam = WebCamCapture()
