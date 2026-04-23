@@ -18,6 +18,8 @@ void Strike::open(uint32_t ms) {
     digitalWrite(PIN_STRIKE_P1, HIGH);
   } else if (_door == 2) {
     digitalWrite(PIN_STRIKE_P2, HIGH);
+  } else if (_door == 3) {
+    digitalWrite(PIN_GATE_MOTOR, HIGH);
   }
 }
 
@@ -50,6 +52,8 @@ void Strike::tick(float ina_ma) {
       digitalWrite(PIN_STRIKE_P1, LOW);
     } else if (_door == 2) {
       digitalWrite(PIN_STRIKE_P2, LOW);
+    } else if (_door == 3) {
+      digitalWrite(PIN_GATE_MOTOR, LOW);
     }
   }
 }

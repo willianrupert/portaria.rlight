@@ -4,8 +4,9 @@
 
 class Strike {
 public:
-  static Strike& P1() { static Strike s(1); return s; }
-  static Strike& P2() { static Strike s(2); return s; }
+  static Strike& P1()   { static Strike s(1); return s; }
+  static Strike& P2()   { static Strike s(2); return s; }
+  static Strike& Gate() { static Strike s(3); return s; }
 
   void open(uint32_t ms);
   void testPulse();
