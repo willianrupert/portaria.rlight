@@ -141,6 +141,15 @@ void StateMachine::_handleIdle(const PhysicalState& w) {
     delay(50);   // debounce simples — não é ISR
     if (digitalRead(PIN_BUTTON) == LOW) { transition(State::AWAKE); return; }
   }
+
+  // Botão Interno P2 (v8): Liberação imediata para saída do morador
+  if (w.int_button_pressed) {
+    Strike::P2().open(ConfigManager::instance().cfg.door_open_ms);
+    Buzzer::beep(1, 100);
+    UsbBridge::instance().sendEvent("INTERNAL_P2_RELEASE", _ctx);
+    // Nota: Não transita estado, apenas libera a trava. 
+    // O monitoramento de porta aberta já é feito pela FSM em IDLE.
+  }
   // Loitering: mmWave detecta presença prolongada sem autorização
   if (w.person_present && ConfigManager::instance().cfg.enable_loitering_alarm) {
     static uint32_t loiter_start = 0;
