@@ -162,3 +162,84 @@ Versões de firmware do ESP32-S3, software do Orange Pi e interface web são num
 
 ### Hardware
 - **Plataforma balança de piso (80×70cm):** HX711 + 4 células de carga 50kg (200kg nominal). Substituiu a balança de prateleira. Resolve: pacotes grandes que não cabem na prateleira, detecção de coleta reversa, suporta pessoa andando (pico ~100kg com fator de impacto — dentro da margem). `FLOOR_TRIGGER_S = 3s` discrimina passagem de pessoa de depósito estático.
+
+---
+
+## [v5.0.0] — Resiliência Industrial e Proteções Avançadas
+**Data:** Fevereiro–Março de 2026
+**Codinome:** *Boa Viagem*
+**Foco:** Casos de borda que só aparecem em produção real.
+
+### Added
+- **Sanity check de timestamp (correção #17):** `TS_SANITY_MIN = 1700000000UL` (Novembro de 2023). `CMD_SYNC_TIME` com valor abaixo deste limiar é descartado silenciosamente. Flag `system_time_invalid` ativada. Evento `SYSTEM_TIME_INVALID_RTC_CHECK` enviado ao OPi. Previne JWTs com data de ano 2000 quando bateria CR2032 morre após queda conjunta de internet e energia.
+- **`millis_at_sync` para extrapolação de timestamp:** Campo adicionado ao `FsmContext`. Ao receber `CMD_SYNC_TIME` válido, armazena `millis()` do momento da sincronização. A FSM usa `ts = unix_time + ((millis() - millis_at_sync) / 1000)` em vez do `unix_time` bruto. Sem isso: todas as entregas dentro da mesma janela de 10min teriam o mesmo timestamp.
+- **Separação de bancos de dados por criticidade:** `TELEM_DB = /dev/shm/rlight_telemetry.db` (RAM), `DELIVERY_DB = /var/lib/rlight/deliveries.db` (SD com WAL). A separação é arquitetural — telemetria descartável não deve competir por ciclos de Flash com dados de entrega permanentes.
+- **`authorized_timeout_ms` (correção #14):** Padrão 10s. Entregador com mãos ocupadas ou hesitante não bloqueia o sistema indefinidamente em `AUTHORIZED`.
+- **`delivering_timeout_ms` (correção #15):** Padrão 180s. Calço acidental bloqueando P1 mecanicamente não deixa FSM presa em `DELIVERING` para sempre.
+- **Spatial debouncing do LD2410B (1,5s):** Configurável via HA como `radar_dbc`. Valor ajustável para ambientes onde vegetação ou chuva forte causam eco esporádico.
+- **I²C Bus Recovery (9 pulsos de clock):** Implementado em `PowerMonitor::readWithRecovery()`. Conforme I²C Specification §3.1.16.
+- **Auto-zero tracking da balança:** `Scale::autoZeroTick(bool idle_safe)` chamado pelo `taskSensorHub` com `idle_safe = true` apenas quando FSM em `IDLE` e P1 + P2 fechadas. Ajuste máximo por ciclo limitado por `cfg.auto_zero_max_drift_g`. Sem escrita na NVS.
+- **FSM preemptiva em `CONFIRMING` e `RECEIPT`:** Se P1 abre durante estes estados, FSM retorna imediatamente a `DELIVERING` sem gerar JWT com dados incompletos. Suporta entregador que volta com segundo pacote.
+- **Feature toggles completos:** `maintenance_mode`, `enable_theft_alarm` (v5, depois removido na v6), `enable_loitering_alarm`, `require_mmwave_empty`, `enable_auto_cooler`.
+- **udev rule `/dev/rlight_esp`:** Estabilidade do path USB independente de resets.
+
+### Fixed
+- **`Scale::tare()` gravando na NVS a cada chamada (correção #12):** `tare()` pode ser chamada no boot e manualmente. Com a implementação anterior, cada chamada consumia um ciclo de apagamento da Flash. Corrigido para RAM-only.
+- **HX711 bloqueando o loop principal (correção #7 — reestruturação):** Migrado para task FreeRTOS dedicada no Core 1.
+
+---
+
+## [v4.0.0] — Arquitetura AMP, FreeRTOS e Criptografia de Borda
+**Data:** Janeiro–Fevereiro de 2026
+**Codinome:** *Tejipió*
+**Foco:** Separação de responsabilidades entre núcleos, JWT real, configuração dinâmica.
+
+### Added
+- **Arquitetura AMP inicial:** `scalePollerTask` no Core 1 como primeira task isolada. `g_scale_weight` como variável global volatile lida pelo Core 0. Precursor do `SharedMemory` com Mutex da v6.
+- **`ConfigManager` com NVS:** Primeira versão data-driven. Todos os thresholds saem do `#define` para NVS carregada no boot. `CMD_UPDATE_CFG` via HA.
+- **`SharedMemory` com Mutex FreeRTOS:** `PhysicalState` protegida por `SemaphoreHandle_t`. Zero race conditions entre núcleos.
+- **DS3231 via Orange Pi:** Arquitetura de sincronização de tempo definitiva. OPi lê o DS3231 via hwclock do kernel e envia `CMD_SYNC_TIME` via USB CDC a cada 10 minutos. ESP32 mantém `unix_time` no `FsmContext`. Sem módulo RTC de hardware no ESP32.
+- **`rtc_sync.py` sem smbus2:** Usa `time.time()` — o Armbian já gerencia o DS3231 como driver de kernel. Zero colisão I²C entre userspace e kernel.
+
+### Fixed
+- **`StaticJsonDocument` banido pelo ArduinoJson v7 (correção #9):** `JsonDocument doc` sem template.
+- **millis() overflow a 49,7 dias (correção #10):** Subtração de uint32_t em todos os timers.
+- **TWDT cego no Core 1 (correção #11):** `esp_task_wdt_add(NULL)` na task do Core 1.
+
+### Security
+- **RF desligado explicitamente:** `esp_wifi_stop()` e `esp_bt_controller_disable()` no `setup()`.
+
+---
+
+## [v3.0.0] — Firmware Industrial, Self-Healing e Eliminação de Heap
+**Data:** Dezembro de 2025–Janeiro de 2026
+**Codinome:** *Olinda*
+**Foco:** Código que compila, não trava e funciona por anos sem atenção.
+
+### Fixed — Batch de correções críticas
+- **Correção #1 — Fragmentação de heap (classe `String`):** Corrigido: `String` proibida em todos os paths críticos.
+- **Correção #2 — Strike bloqueante com `delay()`:** Corrigido: Uso de timers não-bloqueantes.
+- **Correção #3 — `Serial.readStringUntil('\\n')` bloqueante:** Corrigido: buffer circular caractere a caractere.
+- **Correção #4 — Ausência de Task Watchdog (TWDT):** Corrigido: `esp_task_wdt_init(5, true)`.
+- **Correção #5 — ISR sem debounce:** Corrigido: filtro de 50ms por timestamp.
+
+---
+
+## [v2.0.0] — Orange Pi, USB CDC e Primeira FSM
+**Data:** Outubro–Novembro de 2025
+**Codinome:** *Recife Antigo*
+
+### Added
+- **Orange Pi Zero 3 como SBC de mídia e middleware.**
+- **Comunicação USB CDC nativa.**
+- **Interface pygame kmsdrm.**
+
+---
+
+## [v1.0.0] — Proof of Concept e Origem do Projeto
+**Data:** Setembro–Outubro de 2025
+**Codinome:** *Guararapes*
+
+### Added
+- **ESP32 (original) acionando relé.**
+- **Validação do airlock de duas portas.**
