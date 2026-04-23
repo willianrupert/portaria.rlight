@@ -63,7 +63,6 @@ Versões de firmware do ESP32-S3, software do Orange Pi e interface web são num
 ### Hardware
 - **Webcam USB 1080p:** Migração de `fswebcam` para OpenCV direto. Acesso ao `/dev/video0` via `cv2.VideoCapture`. Descarte dos primeiros 5 frames de calibração automática de brilho do sensor CMOS.
 
-
 ---
 
 ## [v7.0.0] — Controle de Acesso Wiegand, AMP FreeRTOS e Arquitetura Mission-Critical
@@ -216,33 +215,86 @@ Versões de firmware do ESP32-S3, software do Orange Pi e interface web são num
 **Codinome:** *Olinda*
 **Foco:** Código que compila, não trava e funciona por anos sem atenção.
 
+Esta versão foi o resultado de duas revisões independentes de código que identificaram 8 falhas críticas na implementação anterior. Todas foram corrigidas.
+
 ### Fixed — Batch de correções críticas
-- **Correção #1 — Fragmentação de heap (classe `String`):** Corrigido: `String` proibida em todos os paths críticos.
-- **Correção #2 — Strike bloqueante com `delay()`:** Corrigido: Uso de timers não-bloqueantes.
-- **Correção #3 — `Serial.readStringUntil('\\n')` bloqueante:** Corrigido: buffer circular caractere a caractere.
-- **Correção #4 — Ausência de Task Watchdog (TWDT):** Corrigido: `esp_task_wdt_init(5, true)`.
-- **Correção #5 — ISR sem debounce:** Corrigido: filtro de 50ms por timestamp.
+
+- **Correção #1 — Fragmentação de heap (classe `String`):** A classe `String` do Arduino aloca memória dinamicamente no heap. Após meses de uso contínuo, a RAM do ESP32 vira "queijo suíço" (fragmentação). Um dia, na geração do JWT, não existe bloco contíguo disponível → `std::bad_alloc` → panic/reboot. Corrigido: `String` proibida em todos os paths críticos. `char[]` + `snprintf` + `strlcpy` em todos os módulos (`JwtSigner`, `UsbBridge`, `HealthMonitor`, `QRReader`). Tamanhos de buffer definidos como constantes em `Config.h`.
+
+- **Correção #2 — Strike bloqueante com `delay()`:** O acionamento do strike usava `delay(500)` para manter o pino HIGH. Durante 500ms, o ESP32 não escutava USB, ignorava botões e os LEDs PWM por software paravam. Pior: na v5, com o pulso de 3s para a mola aérea, o sistema ficaria congelado por 3 segundos a cada abertura. Corrigido: `Strike::open()` apenas seta `_opened_at = millis()` e `_duration`. `Strike::tick()` no loop desliga o pino quando `millis() - _opened_at >= _duration`. Zero bloqueio.
+
+- **Correção #3 — `Serial.readStringUntil('\n')` bloqueante:** Esta função do framework Arduino aguarda até 1000ms se o terminador não chegar (interferência eletromagnética do strike, cabo USB sem blindagem). Durante 1 segundo, a balança perde amostras e a FSM atrasa. Corrigido: buffer circular caractere a caractere. `Serial.available()` verificado no loop, um `char` lido por ciclo, JSON processado apenas quando `\n` chega. Zero espera.
+
+- **Correção #4 — Ausência de Task Watchdog (TWDT):** Se o barramento I²C travar (notoriamente comum com ruídos elétricos afetando os pull-ups do SDA/SCL durante o pulso do strike), `Wire.h` entra em loop infinito. O sistema trava com a tela ligada e o OPi não pode fazer nada — sem watchdog, nunca reinicia. Corrigido: `esp_task_wdt_init(5, true)` no `setup()`. `esp_task_wdt_add(NULL)` registra a task principal. `esp_task_wdt_reset()` na primeira linha do `loop()`.
+
+- **Correção #5 — ISR sem debounce (bouncing fantasma):** Micro switches mecânicos tremem em nível microscópico quando os contatos fecham, gerando dezenas de transições HIGH/LOW em menos de 2ms. A ISR disparava 50 vezes por fechamento de porta. Corrigido: filtro de 50ms por timestamp dentro da `IRAM_ATTR`. `volatile uint32_t last_isr_p1` persiste entre chamadas e descarta transições dentro da janela de bouncing.
+
+- **Correção #6 — `delay()` na FSM (`_handleConfirming`):** `delay(SCALE_SETTLE_MS)` de 2 segundos antes de ler a balança. Durante esses 2s: sem USB, sem botões, sem atualização de LEDs. Corrigido: flag `scale_settle_start`. Fase 1: registra `millis()` e retorna. Fase 2 (próximos ciclos): verifica elapsed. Apenas avança quando 2s passaram sem bloquear.
+
+- **Correção #7 — HX711 bloqueando o loop (300ms por leitura):** O HX711 opera a 10 samples/segundo. `read_average(3)` = 300ms de bloqueio. A FSM rodava a ~3 "frames" por segundo. Corrigido: `FreeRTOS Task` no Core 1 com `vTaskDelay(100ms)` de yield. A FSM no Core 0 lê `g_scale_weight` (variável volatile) em tempo zero.
+
+- **Correção #8 — RF não desligado explicitamente:** A biblioteca Arduino inicializa o rádio WiFi passivamente. Sem desligamento explícito, o ESP32 pode ser escaneado por ferramentas WiFi e consome energia de rádio desnecessária. Corrigido: `esp_wifi_stop()`, `esp_wifi_deinit()`, `esp_bt_controller_disable()` antes de qualquer outra inicialização.
+
+### Added
+- **`HealthMonitor` com `SensorHealth` struct:** `online`, `degraded`, `fail_count`, `total_fails`, `last_ok_ms`, `last_fail_ms`, `last_error[48]`, `auto_recovered`. Cada sensor tem score ponderado em `systemScore()` (0–100). `tryRecover()` tenta reinicializar sensores degradados a cada 30s.
+- **Operação degradada por sensor:** Sensor com 3 falhas consecutivas → `degraded = true`. FSM adapta o fluxo: HX711 degradado → peso `null` no JWT; mmWave degradado → fallback por timer; GM861S degradado → fallback interfone imediato.
+- **`UsbBridge` com buffer circular completo:** Toda serialização usa `snprintf` com `char[]`. `_dispatch()` processa JSON completo somente quando `\n` chega. CRC8 em todos os pacotes (Dallas/Maxim polinômio 0x07).
+- **`QRReader` com identificação de transportadora:** `CarrierPattern` struct com validador opcional. Correios: validação S10 completa (2 letras + 8 dígitos + check + BR). Shopee: prefixo SPX. Amazon: prefixo TBA. Mercado Livre: OI/LP/MLE. Loggi: LGI. Jadlog: J + comprimento mínimo. `isAllowedCarrier()` em modo lista de bloqueio: INVALID não passa, UNKNOWN passa.
+- **`JwtSigner` stub funcional:** Implementação simulada com `snprintf` correto. Substituída pela implementação real com mbedTLS na v8.
+- **Pinout definitivo da v3:** Todos os 21 GPIOs documentados com função, interface, direção e observação crítica.
+
+### Hardware
+- **Migração de balança de prateleira para plataforma de piso:** Decisão tomada nesta versão baseada em análise de casos de borda. A plataforma de piso (80×70cm, 200kg nominal) resolve simultaneamente: pacotes grandes, coleta reversa, detecção de passagem de pessoa por timer.
+- **Remoção de MPU6050 e BME280:** Sensor de vibração e sensor de temperatura externa removidos. Temperatura monitorada pelo sensor nativo do ESP32-S3 (`temperatureRead()`).
 
 ---
 
 ## [v2.0.0] — Orange Pi, USB CDC e Primeira FSM
 **Data:** Outubro–Novembro de 2025
 **Codinome:** *Recife Antigo*
+**Foco:** Computação distribuída, interface gráfica e máquina de estados estruturada.
 
 ### Added
-- **Orange Pi Zero 3 como SBC de mídia e middleware.**
-- **Comunicação USB CDC nativa.**
-- **Interface pygame kmsdrm.**
+- **Orange Pi Zero 3 como SBC de mídia e middleware:** Armbian, OverlayFS rootfs somente-leitura, systemd. Ethernet GbE como primário, WiFi como fallback. Separação de responsabilidades: ESP32 cuida do tempo real, OPi cuida de mídia, rede e interface.
+- **Comunicação USB CDC (pinos 19/20):** Substituição de UART convencional por USB CDC nativo do ESP32-S3. Vantagens: velocidade superior, detecção de conexão/desconexão, elimina conversor de nível lógico, path estável via udev.
+- **Primeira FSM estruturada:** Estados `IDLE`, `AWAKE`, `WAITING_QR`, `AUTHORIZED`, `INSIDE_WAIT`, `DELIVERING`, `CONFIRMING`, `RECEIPT`, `ABORTED`, `DOOR_ALERT`, `ERROR`. Transições auditáveis via `transition()` centralizado.
+- **Interface pygame kmsdrm (sem X11):** Tela HDMI 7" IPS 1024×600px renderizada diretamente no framebuffer via KMS/DRM. Sem servidor gráfico, zero overhead de X11. `pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.HWSURFACE`.
+- **Integração Home Assistant via MQTT:** MQTT Auto-Discovery para exposição automática de entidades. Primeiras entidades: `sensor.fsm_state`, `sensor.weight_g`, `switch.maintenance_mode`.
+- **`MachineState` observer pattern:** Espelho Python da FSM do ESP32. `subscribe(callback)` para múltiplos listeners (UI, HA, câmera, Oracle). Thread-safe com `threading.Lock()`.
+- **`SerialBridge` com reconexão elástica:** Loop de reconexão com `time.sleep(2)` em `SerialException`. Survives hot-plug do cabo USB.
+- **GM861S leitor 2D UART:** Lê QR Code, Code 128, EAN, PDF417 de etiquetas de qualquer transportadora. Montado atrás de acrílico IR-pass. LED de iluminação 12V durante `WAITING_QR`.
+- **LD2410B mmWave 24GHz:** Detecção de presença estacionária. Instalado no teto do corredor. Fundamental para confirmar saída do entregador antes de gerar comprovante.
+- **HX711 + 4 células de carga:** Primeira implementação de balança. Prateleira 1m×20cm, 200kg nominal, resolução prática ~2g.
+- **Electric strike 12V fail-secure:** MOSFET LR7843 com flyback 1N4007. HIGH sólido, nunca PWM. Fail-secure: fecha sem energia. P1 externa.
+- **INA219 monitor de corrente:** Validação de acionamento do strike. Se corrente < `ina_strike_min_ma` após pulso → `STRIKE_P1_FAIL` + transição para `ERROR`.
+- **Cooler 40mm com PWM por temperatura:** `temperatureRead()` nativo do ESP32-S3. Canal ledc. Liga se `> COOLER_TEMP_MIN_C`, interpola até 100% em `COOLER_TEMP_MAX_C`.
+- **Buzzer ativo com padrões por estado:** `beep(1, 100)` em AWAKE, `beep(2, 150)` em AUTHORIZED, `melody_success()` em RECEIPT, `continuous(true)` em DOOR_ALERT.
+- **LED azul 30mm com efeitos PWM:** Breathe 2s = IDLE, blink 300ms = WAITING_QR, solid = AWAKE/AUTHORIZED. Canal ledc com função matemática `exp(sin(millis * k))` para efeito de respiração realista.
+- **ISRs nos limit switches:** `IRAM_ATTR` para latência mínima. Interrupção CHANGE em P1 (GPIO 38) e P2 (GPIO 39).
+- **`OracleRESTClient` com retry infinito:** Upload de JWT + foto em background thread. Backoff `min(60, attempt * 5)` segundos. Nenhuma entrega perdida por falta de internet temporária.
+
+### Changed
+- **ESP32 → ESP32-S3 N16R8:** Upgrade para dual-core 240MHz, 16MB Flash, 8MB PSRAM, acelerador criptográfico mbedTLS nativo, USB OTG nativo (USB CDC sem chip adicional).
+
+### Notes
+- A decisão de usar USB CDC em vez de UART para comunicação ESP32↔OPi foi tomada após perceber que o conversor serial adicional introduzia um ponto de falha e um limite de velocidade desnecessários. O USB CDC do ESP32-S3 apresenta-se como dispositivo ACM ao Linux — driver `cdc_acm` nativo, sem instalação.
 
 ---
 
 ## [v1.0.0] — Proof of Concept e Origem do Projeto
 **Data:** Setembro–Outubro de 2025
 **Codinome:** *Guararapes*
+**Foco:** Validar a hipótese central: é possível construir uma portaria autônoma de qualidade industrial com hardware acessível.
 
 ### Added
-- **ESP32 (original) acionando relé.**
-- **Validação do airlock de duas portas.**
+- **ESP32 (original) acionando relé:** Primeiro circuito funcional. Strike 12V controlado por relé de 5V via transistor NPN. Acionamento por botão físico e comando serial.
+- **Validação do airlock de duas portas:** Confirmação física de que o conceito de dois portões — P1 externa abrindo para corredor, P2 interna separando corredor da casa — é construtivamente viável no espaço disponível.
+- **Primeiro script Python de controle:** Envio de comandos por serial para o ESP32. `serial.Serial` + `readline()`. Sem estrutura de protocolo.
+- **Definição da filosofia de design:** "Física determinística em vez de IA visual." Câmeras existem para registro, nunca para decisão. Esta premissa não mudou em nenhuma versão subsequente.
+
+### Notes
+- A inspiração para o nome *rlight* vem de um avião construído artesanalmente pelo pai do criador do projeto — um projeto de décadas que combina engenharia, paciência e amor pelo que se faz. A portaria é, em escala diferente, o mesmo tipo de projeto: algo construído com as próprias mãos, para durar.
+- O local de instalação é Jaboatão dos Guararapes, PE — litoral pernambucano com temperatura de 30–45°C, umidade relativa de 70–90%, chuvas torrenciais sazonais. Todas as decisões de hardware consideram este ambiente.
 
 ---
 
@@ -250,19 +302,35 @@ Versões de firmware do ESP32-S3, software do Orange Pi e interface web são num
 
 ### ADR-001: Física como dado, câmera como registro
 **Status:** Ativo desde v1.0.0
-Câmeras falham com iluminação. Física (peso, presença, corrente) não mente.
+A câmera é o único sensor que interpreta imagens. Todos os outros sensores medem grandezas físicas objetivas: peso (HX711), presença (mmWave), corrente (INA219), estado de porta (micro switch). Nenhuma decisão crítica — abrir porta, gerar JWT, detectar entrega — depende de visão computacional. Câmeras falham com iluminação, ângulo, oclusão e degradação de modelo. Física não mente.
 
 ### ADR-002: Air-gapped por design
 **Status:** Ativo desde v3.0.0
-ESP32-S3 tem WiFi/BT desligados permanentemente. Superfície de ataque zero.
+O ESP32-S3 tem WiFi e Bluetooth desligados permanentemente no nível de silício. O firmware não inclui nenhum driver de rede. A superfície de ataque remoto é zero. Toda comunicação é via USB CDC físico para o Orange Pi, que é o único nó com acesso à rede.
 
 ### ADR-003: Offline-first, nuvem como espelho
 **Status:** Ativo desde v2.0.0
-Assinatura JWT local. Nuvem Oracle é espelho de conveniência, não autoridade.
+Toda entrega é processada e o comprovante é gerado localmente, sem dependência de internet. O JWT é assinado no ESP32-S3 com segredo que nunca sai do chip. O servidor Oracle Cloud é um espelho de conveniência — não é autoridade. Um JWT válido gerado durante queda de internet é tão autêntico quanto um gerado com conexão plena.
 
 ### ADR-004: Wear-leveling ativo da NVS
 **Status:** Ativo desde v5.0.0
-Preservação da Flash: zero writes desnecessários na NVS/SD.
+A Flash do ESP32-S3 tem ~100.000 ciclos de apagamento por célula. Qualquer write sem necessidade é um desperdício de vida útil. Regras:
+1. `tare()` da balança nunca escreve na NVS — RAM only.
+2. `ConfigManager::updateParam()` compara o valor antes de qualquer `putX()`.
+3. O único valor que vai para NVS na calibração é `cal_factor`, e apenas quando muda.
+4. Telemetria (heartbeats, state transitions) em `/dev/shm` (RAM disk) — zero ciclos do MicroSD.
+
+### ADR-005: Fail-secure em todos os atuadores
+**Status:** Ativo desde v1.0.0
+Queda de energia fecha P1 (strike fail-secure). P2 também fail-secure. Uma pessoa presa no corredor durante queda de energia é o pior cenário — o morador deve abrir manualmente. Este trade-off (conforto operacional vs. segurança física) está documentado e é intencional. Um botão de saída de emergência interno que abre P1 independentemente de energia é recomendado para instalação final.
+
+### ADR-006: AMP (Asymmetric Multiprocessing) com FreeRTOS
+**Status:** Ativo desde v4.0.0, consolidado em v6.0.0
+Core 1 é o sistema nervoso (sensores, I/O, tempo real). Core 0 é o cérebro (lógica, criptografia, rede). Nenhum core conhece os detalhes de implementação do outro — apenas a `SharedMemory` com Mutex. Esta separação é arquitetural, não apenas de performance. Permite testar a FSM sem hardware físico (unit tests com mock de `PhysicalState`).
+
+### ADR-007: JWT como prova, não como acesso
+**Status:** Ativo desde v2.0.0
+O JWT gerado pelo ESP32-S3 prova que uma entrega ocorreu. Não concede acesso a nada. A chave de assinatura nunca sai do chip. O servidor Oracle armazena apenas a chave pública para verificação — comprometimento do servidor não compromete tokens passados ou futuros.
 
 ---
 
@@ -270,9 +338,26 @@ Preservação da Flash: zero writes desnecessários na NVS/SD.
 
 | Componente | v1 | v2 | v3 | v4 | v5 | v6 | v7 | v8 |
 |---|---|---|---|---|---|---|---|---|
+| ESP32 (original) | ✓ | — | — | — | — | — | — | — |
 | ESP32-S3 N16R8 | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Orange Pi Zero 3 | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Strike P1/P2 | ✓/— | ✓/— | ✓/— | ✓/— | ✓/— | ✓/— | ✓/✓ | ✓/✓ |
+| GM861S QR Reader | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| LD2410B mmWave | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| HX711 Balança | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| INA219 (P1) | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| INA219 (P2) | — | — | — | — | ✓ | ✓ | ✓ | ✓ |
+| Strike P1 | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Strike P2 | — | — | — | — | — | — | ✓ | ✓ |
+| Micro switch P1 | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Micro switch P2 | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| DS3231 RTC | — | — | — | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Webcam USB | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Câmera Intelbras+DVR | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Tapo D210 (fachada) | — | — | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| ZW111 Biometria | — | — | ✓ | ✓ | ✓ | — | — | — |
+| TF9S + Wiegand | — | — | — | — | — | — | ✓ | ✓ |
+| Balança prateleira | — | — | ✓ | ✓ | — | — | — | — |
+| Balança piso 80×70cm | — | — | — | — | ✓ | ✓ | ✓ | ✓ |
 
 ---
 
@@ -280,9 +365,29 @@ Preservação da Flash: zero writes desnecessários na NVS/SD.
 
 | Termo | Definição no contexto rlight |
 |---|---|
-| **AMP** | Asymmetric Multiprocessing — Core 0 (lógica) e Core 1 (sensores) |
-| **JWT** | JSON Web Token — comprovante criptográfico de entrega HMAC-SHA256 |
-| **NVS** | Non-Volatile Storage — armazenamento em Flash do ESP32 |
+| **AMP** | Asymmetric Multiprocessing — ESP32-S3 dual-core com Core 0 (lógica) e Core 1 (sensores) com responsabilidades estritamente separadas |
+| **Air-gapped** | WiFi e Bluetooth desligados permanentemente no nível de silício. Sem superfície de ataque remoto no ESP32-S3 |
+| **Airlock** | Os dois portões em sequência (P1 externa → corredor → P2 interna). P1 e P2 nunca abrem simultaneamente |
+| **Conformal coating** | Verniz eletrônico aplicado no HX711 para proteção contra umidade tropical (70-90% UR) e oxidação |
+| **Fail-secure** | Strikes elétricos que fecham quando sem energia. Queda de energia nunca abre uma porta |
+| **FSM** | Finite State Machine — máquina de estados finita. 16 estados na v7/v8 |
+| **HX711** | Conversor analógico-digital de 24 bits para células de carga. Interface bit-bang, 10 samples/segundo |
+| **INA219** | Sensor de corrente e tensão I²C. Usado para validar acionamento do strike e detectar desgaste |
+| **JWT** | JSON Web Token — comprovante criptográfico de entrega assinado pelo ESP32-S3 com HMAC-SHA256 |
+| **LD2410B** | Radar mmWave 24GHz. Detecta presença estacionária (pessoa parada no corredor) com alcance configurável por gates |
+| **mbedTLS** | Biblioteca criptográfica embarcada da ARM, nativa no ESP-IDF do ESP32-S3. Usa acelerador de hardware |
+| **NVS** | Non-Volatile Storage — armazenamento em Flash do ESP32. Namespace-based, ~100k ciclos de apagamento por célula |
+| **OverlayFS** | Sistema de arquivos do Linux que sobrepõe uma camada de escrita em RAM sobre um rootfs somente-leitura. Previne corrupção do SD por queda de energia |
+| **PhysicalState** | Struct C++ que representa o estado físico do mundo (pesos, portas, presença, correntes) em um dado momento. Único dado compartilhado entre núcleos |
+| **SharedMemory** | Classe singleton que encapsula o PhysicalState com proteção por SemaphoreHandle_t (Mutex FreeRTOS) |
+| **Spatial debouncing** | Técnica que exige N milissegundos contínuos de ausência antes de marcar `person_present = false`. Previne falsos "vazios" do mmWave |
+| **Stale Data** | Dado do SharedMemory com `sample_age_ms > stale_data_max_ms`. FSM pula o tick quando dados estão velhos demais |
+| **Strike** | Electric strike — fechadura elétrica solenóide. Abre quando energizada (12V). Fail-secure: fecha quando desligada |
+| **TF9S** | Módulo de controle de acesso com teclado 4×3, leitor RFID IC e digital. Interface Wiegand 26-bit D0/D1 |
+| **TWDT** | Task Watchdog Timer — mecanismo de hardware que causa panic/reboot se uma task não resetar o contador em N segundos |
+| **USB CDC** | USB Communications Device Class — apresenta o ESP32-S3 como porta serial virtual ao Linux sem driver adicional |
+| **Wear-leveling** | Técnica de preservação da Flash: só escreve quando o valor realmente muda, nunca por rotina |
+| **Wiegand** | Protocolo de dois fios (D0/D1) para transmissão de dados de controle de acesso. Cada bit é um pulso de ~50µs em D0 (bit 0) ou D1 (bit 1) |
 
 ---
 
