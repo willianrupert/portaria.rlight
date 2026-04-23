@@ -1,4 +1,15 @@
-# RLight Portaria Autônoma — Compound Engineering Memory
+# RLight Portaria Autônoma — Compound Engineering Memory - RLight v8
+
+## Decision Log (2026-04-23)
+- **Security**: Migrated to HMAC-SHA256 (mbedtls) for receipt signing on ESP32-S3. Replaced mockups with real JWT verification.
+- **Vision**: Replaced `pygame` with `OpenCV` on Orange Pi Host for faster, zero-write (RAM) camera snapshots.
+- **Cloud**: Deployed Node.js validator on Oracle Cloud with NGINX reverse proxy and SSL (Certbot).
+- **UX**: Implemented Apple-style Glassmorphism UI with adaptive theme support (Light/Dark) and full immersion for iPhone 16 Pro Max.
+
+## Architecture Highlights
+1. **Edge Signing**: ESP32 signs a JSON payload with a shared secret.
+2. **Local Capture**: Host captures image on trigger and generates a local link.
+3. **Cloud Validation**: User scans QR, cloud server verifies signature and displays history/details.
 
 Este documento serve como memória persistente ("Claude Code style") para o Agente de IA, mantendo o contexto arquitetural, regras de design e histórico de decisões entre as sessões.
 
@@ -13,6 +24,11 @@ Você é o engenheiro principal focado na transição da V6 para a V7 do firmwar
   - Controle de Acesso via Teclado Matricial I2C (PCF8574).
   - Dois Strikes separando as lógicas (P1 para entrega/reversa, P2 exclusivo para morador).
   - Nova Interface Gráfica (1024x600 IPS).
+- **Novidades V8 (EM DESENVOLVIMENTO):**
+  - Integração de Motor de Portão Garen Niid via pulso de botoeira.
+  - Monitoramento de 3 pontos via Reed Switches (Portão, P1, P2).
+  - Botão Interno para liberação imediata da P2 (Morador saindo).
+  - Substituição total de Micro Switches por Reed Switches magnéticos.
 
 ## 3. Diretrizes da Interface (Web UI v7)
 - **Orientação:** Vertical (Portrait) — otimizada para 600x1024.
@@ -34,6 +50,11 @@ Você é o engenheiro principal focado na transição da V6 para a V7 do firmwar
 - **[x] Deploy e Repositório:**
   - [x] Git inicializado e linkado ao repositório remoto oficial.
   - [x] Push realizado com sucesso.
+- **[ ] Implementação V8:**
+  - [ ] Adição de suporte ao Portão Garen (Relé/Pulso).
+  - [ ] Implementação de lógica de Botão Interno P2.
+  - [ ] Migração de monitoramento de portas para Reed Switches.
+  - [ ] Atualização de telemetria para exibir status do portão na UI.
 
 ---
 *Regras do Agente:* Atualize este arquivo sempre que um novo marco arquitetural for superado ou uma nova restrição técnica descobrir-se.
