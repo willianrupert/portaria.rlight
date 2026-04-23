@@ -101,6 +101,11 @@ void UsbBridge::_dispatch(const char* raw) {
       sendEvent("P2_UNLOCKED_REMOTELY", fsm.ctx());
     }
   }
+  else if (!strcmp(cmd, "CMD_UNLOCK_GATE")) {
+    // Pulso no motor Garen
+    Strike::Gate().open(500); // 500ms pulse for gate motor
+    sendEvent("GATE_PULSE_SENT", fsm.ctx());
+  }
   else if (!strcmp(cmd, "CMD_PULSE_STRIKE")) {
     Strike::P1().testPulse();
     if(ConfigManager::instance().cfg.enable_strike_p2) Strike::P2().testPulse();
