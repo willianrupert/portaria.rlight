@@ -63,3 +63,60 @@ Versões de firmware do ESP32-S3, software do Orange Pi e interface web são num
 ### Hardware
 - **Webcam USB 1080p:** Migração de `fswebcam` para OpenCV direto. Acesso ao `/dev/video0` via `cv2.VideoCapture`. Descarte dos primeiros 5 frames de calibração automática de brilho do sensor CMOS.
 
+
+---
+
+## [v7.0.0] — Controle de Acesso Wiegand, AMP FreeRTOS e Arquitetura Mission-Critical
+**Data:** Março–Abril de 2026
+**Codinome:** *Pina*
+**Foco:** Arquitectura de dois núcleos, acesso de moradores via hardware dedicado, coleta reversa.
+
+### Added
+- **Módulo Wiegand completo (`Wiegand.h/cpp`):** Decodificação de frames via ISRs `IRAM_ATTR` nos pinos GPIO 6 (D0) e GPIO 7 (D1). Protocolo Wiegand 26 bits (padrão) com suporte a 34/37 bits alternativos. Captura atômica com `noInterrupts()`/`interrupts()`. Timeout de 25ms para detecção de fim de frame. Zero bloqueio do Core 1.
+- **`AccessController` com banco de códigos na NVS:** Namespace `wieg_db`. Chave `wieg_{codigo_decimal}` → valor `"TIPO:Label"` (ex: `"RESIDENT:Willian Rupert"` ou `"REVERSE_ML:Coleta ML"`). Comandos `CMD_ADD_WIEGAND_CODE`, `CMD_REMOVE_WIEGAND_CODE`, `CMD_LIST_WIEGAND_CODES` via HA. Rate limiting: 5 tentativas inválidas em 5 minutos → cooldown de 10 minutos.
+- **Controle de acesso TF9S integrado:** Módulo com teclado de senha, leitor de cartão IC/RFID e digital. Interface Wiegand D0/D1. Moradores acessam a casa via senha, cartão ou digital — sem app, sem celular, sem dependência de rede.
+- **Tipos de acesso com semântica distinta:**
+  - `RESIDENT` → abre P1 + delay de 2s + abre P2
+  - `REVERSE_CORREIOS`, `REVERSE_ML`, `REVERSE_AMAZON`, `REVERSE_GENERIC` → apenas P1, fluxo de coleta reversa
+- **Dois novos estados FSM: `RESIDENT_P1` e `RESIDENT_P2`:**
+  - `RESIDENT_P1`: P1 aberta, morador deve entrar e deixar fechar. Exibe nome do morador na tela.
+  - `RESIDENT_P2`: P1 fechou, delay de `cfg.p2_delay_ms` (padrão 2000ms) antes de P2 abrir — evita queda de tensão por dois strikes simultâneos. Progresso circular animado.
+- **Novo estado FSM: `REVERSE_PICKUP`:** Coletor de reversa dentro do corredor. Balança monitora variação negativa (objeto sendo retirado). JWT com `"direction": "OUTBOUND"` e transportadora identificada. Notificação push ao morador.
+- **Delay configurável entre P1 e P2 (`p2_delay_ms`):** Padrão 2000ms. Configurável via HA de 500ms a 5000ms. Previne queda de tensão do barramento 12V ao acionar dois solenoides em sequência rápida.
+- **`CMD_RESIDENT_UNLOCK` via HA:** Sequência idêntica ao TF9S — P1 → delay 2s → P2. Substituição do antigo `CMD_UNLOCK_P2` direto por uma sequência segura e com interbloqueio verificado.
+- **Proteção contra duplo acionamento do strike (S1):** Flag `_strike_armed` na classe `Strike`. `open()` retorna imediatamente se `_strike_armed = true`. Reseta em `tick()` quando o pino vai LOW. Previne sobrecarga da bobina e desgaste prematuro do MOSFET.
+- **Fallback graceful quando mmWave degradado (S2):** Se `require_mmwave_empty = true` e o LD2410B está `DEGRADED`, `_handleDoorReopened()` usa timer de 3× `cfg.radar_debounce_ms` como proxy de ausência. FSM avança para `CONFIRMING` com flag `mmwave_fallback_used: true` no JWT. Sem fallback: sistema trava permanentemente em `DOOR_REOPENED` — o único cenário que bloqueava todos os entregadores seguintes sem intervenção manual.
+- **Persistência de contexto de entrega na NVS durante o ciclo (S3):** Ao primeiro sinal de variação de balança em `INSIDE_WAIT`, ESP32 grava no namespace `dlv_ctx`: `qr_code`, `carrier`, `ts`. Se houver queda de energia entre `INSIDE_WAIT` e `CONFIRMING`, o boot recupera esses dados e gera o JWT com flag `recovery: true`. Sem isso: queda de energia perdia o comprovante mesmo com o pacote no corredor.
+- **Watchdog de coerência FSM × hardware (S4):** Função `checkCoherence()` executada a cada 5s no `taskLogicBrain`. Verifica combinações impossíveis: FSM em `IDLE` com corrente no INA219 > 200mA por mais de 5s → `COHERENCE_STRIKE_IDLE`. P1 + P2 abertas simultaneamente em qualquer estado → `DOOR_ALERT`. Detecta falhas silenciosas de hardware.
+- **Log de duração de estados (S5):** Cada `STATE_TRANSITION` inclui `prev_state` e `prev_duration_ms`. Dados para diagnóstico operacional: 47s em `WAITING_QR` antes de timeout indica etiqueta ilegível; 2s em `AUTHORIZED` confirma mola aérea funcionando.
+- **Contador de ciclos do strike na NVS (S6):** `Preferences` no namespace `strike_p1`. Incrementado a cada `open()` confirmado pelo INA219. Publicado no heartbeat. Alerta configurável via HA quando ultrapassar threshold (padrão: 80.000 ciclos). Vida útil do strike documentada em tempo operacional real.
+- **Spatial debouncing do LD2410B:** Micro-drops de presença (entregador imóvel, ponto cego momentâneo do radar) causavam falsa transição `DOOR_REOPENED → CONFIRMING` com pessoa ainda no corredor. Agora `person_present` só vai a `false` após `cfg.radar_debounce_ms` (padrão 1500ms) contínuos de ausência. Configurável via HA como `radar_dbc`.
+- **I²C Bus Recovery por EMI do strike:** O pulso da bobina do strike gera pico eletromagnético que pode travar o INA219 com SDA em LOW. `PowerMonitor::readWithRecovery()` detecta a travada e executa 9 pulsos de clock no SCL por bit-bang (I²C Spec §3.1.16), libera o barramento e reinicializa o driver. Sem recovery: toda a task do Core 1 trava e o TWDT reinicia o chip perdendo o contexto.
+- **Auto-zero tracking da balança em RAM:** Drift térmico em Jaboatão (30°C a 45°C, 80%+ de umidade relativa) causa variação de ~±300g ao longo do dia. Em `IDLE` com P1 e P2 fechadas, se a leitura da balança variar menos que `cfg.auto_zero_max_drift_g` (padrão 50g), o `_zero_offset` é recalibrado silenciosamente na RAM. **Nunca toca a NVS.** Compensa drift sem intervenção do morador.
+- **Stale Data Protection (correção #16):** `PhysicalState` inclui `sample_age_ms` calculado no `getSnapshot()`. Se `sample_age_ms > cfg.stale_data_max_ms` (padrão 150ms), o tick da FSM é pulado naquele ciclo. Previne ações de hardware com dados de sensores desatualizados durante recuperação de EMI ou congestionamento de I²C.
+- **`AUTHORIZED` timeout (correção #14):** Se P1 não abrir em `cfg.authorized_timeout_ms` (padrão 10s) após o strike ser acionado, FSM retorna ao `IDLE` com evento `AUTHORIZATION_TIMED_OUT`. Previne deadlock quando entregador não empurra a porta (mãos ocupadas, porta pesada, hesitação).
+- **`DELIVERING` timeout (correção #15):** Se P1 não abrir em `cfg.delivering_timeout_ms` (padrão 180s) após objeto detectado na balança, FSM gera JWT com flag `unconventional_exit: true`, envia push alert ao morador e volta ao `IDLE`. Previne deadlock por calço acidental ou saída pela P2 (emergência).
+- **`MAINTENANCE` como estado FSM próprio (não flag booleana):** Estado `MAINTENANCE` no enum. FSM entra por via do ConfigManager (`maintenance_mode = true` via HA) com prioridade absoluta sobre qualquer outro estado. Impossível transitar acidentalmente para `AUTHORIZED` ou abrir strikes durante manutenção.
+- **udev rule `/dev/rlight_esp`:** Regra em `/etc/udev/rules.d/99-rlight-esp32.rules` vincula o symlink ao Vendor ID `303a` e Product ID `1001` do ESP32-S3. Surtos elétricos que resetam a porta USB e trocam `/dev/ttyACM0` para `/dev/ttyACM1` são invisíveis ao software — o path nunca muda.
+
+### Changed
+- **Botão interno de P2 eliminado:** Anteriormente planejado um botão momentâneo dentro do corredor para acionar P2. Removido. Acesso de moradores é exclusivamente via TF9S (D0/D1 Wiegand) ou HA. Simplifica o hardware e elimina superfície de ataque física.
+- **`enable_strike_p2` migrado de `false` para `true` como default:** Strike P2 fisicamente instalado nesta versão.
+- **Fluxo de acesso de moradores redesenhado:** A sequência anterior (código → P2 direta) é substituída por: TF9S válido → P1 abre por `door_open_ms` → P1 fecha → delay `p2_delay_ms` → P2 abre por `door_open_ms`. O airlock é sempre respeitado — P1 sempre fecha antes de P2 abrir.
+- **`taskLogicBrain` verifica Wiegand fora do switch de estados:** O processamento do sinal TF9S ocorre antes do `switch(_ctx.state)`, com guarda explícita que impede interromper um ciclo de entrega ativo. Morador pode usar o TF9S enquanto sistema está em `IDLE` ou `MAINTENANCE`, mas não durante `WAITING_QR` a `RECEIPT`.
+
+### Fixed
+- **Colisão I²C entre Python e kernel no DS3231:** `rtc_sync.py` usava `smbus2` para ler o DS3231 diretamente, colidiendocom o driver nativo do kernel Armbian (`rtc_ds3231`). Corrigido: o script usa `time.time()` — o SO já sincronizou o relógio via `hwclock --hctosys` no boot.
+- **Bloqueio permanente em `DOOR_REOPENED` com mmWave degradado (S2):** Sem o fallback por timer, um LD2410B falhando deixava o sistema preso indefinidamente neste estado, bloqueando todos os entregadores seguintes.
+
+### Removed
+- **Botão momentâneo interno (GPIO 8):** Ver "Changed" acima. Removido antes de ser fisicamente instalado.
+- **PIN_ACCESS_CTRL_RX/TX (UART para TF9S):** Eliminado quando confirmado que o TF9S usa Wiegand, não UART ASCII.
+
+### Security
+- **Rate limiting do Wiegand:** 5 tentativas de códigos inválidos em 5 minutos → cooldown de 10 minutos. Previne brute-force físico no teclado ou com cartões clonados.
+- **Interbloqueio em três camadas:** Em `tick()` antes de abrir P1, em `_handleResidentP2()` antes de abrir P2, e em `CMD_RESIDENT_UNLOCK` no UsbBridge. Impossível abrir P1 e P2 simultaneamente por qualquer caminho de código.
+
+### Hardware
+- **TF9S instalado:** Controle de acesso com teclado 4×3, leitor RFID IC, leitor de digital. Interface Wiegand D0 (GPIO 6) / D1 (GPIO 7). Pull-up externo 2,2kΩ recomendado em ambos os pinos.
+- **Strike P2 (GPIO 46) instalado:** MOSFET LR7843, flyback 1N4007. High sólido nunca PWM.
