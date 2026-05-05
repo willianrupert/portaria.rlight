@@ -17,9 +17,9 @@
 #define PIN_HX711_DATA      42   // Remapeado (Antigo 11)
 #define PIN_STRIKE_P1       15   // Remapeado (Antigo 45)
 #define PIN_STRIKE_P2       16   // Remapeado (Antigo 46)
-#define PIN_SW_P1           35   // Remapeado (Antigo 38)
-#define PIN_SW_P2           36   // Remapeado (Antigo 39)
-#define PIN_BUTTON          37   // Remapeado (Antigo 35)
+#define PIN_SW_P1            4   // SEGURO WROOM-2 (Antigo 38 -> 35 -> 4)
+#define PIN_SW_P2            5   // SEGURO WROOM-2 (Antigo 39 -> 36 -> 5)
+#define PIN_BUTTON           7   // SEGURO WROOM-2 (Antigo 35 -> 37 -> 7)
 #define PIN_BUZZER          48
 #define PIN_LED_BTN         39   // Remapeado (Antigo 4)
 #define PIN_LED_QR          40   // Remapeado (Antigo 5)
@@ -31,6 +31,9 @@
 #define HEALTH_REPORT_MS    60000
 #define NTP_SYNC_INTERVAL   600000  // 10 min
 #define TS_SANITY_MIN  1700000000UL  // Nov/2023 — rejeita RTC morto
+#define I2C_ADDR_KEYPAD      0x20
+#define I2C_ADDR_INA219      0x40
+#define I2C_ADDR_INA219_P2   0x41
 
 // ── BUFFER SIZES (stack — zero heap) ────────────────────────────────
 #define UART_RX_BUF_SIZE    512
