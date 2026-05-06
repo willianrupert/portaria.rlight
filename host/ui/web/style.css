@@ -434,7 +434,54 @@ body {
     }
 }
 
+/* Settings Screen */
+#screen-SETTINGS { height: 100%; width: 100%; transform: translateY(0); }
+.screen-header { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 0; }
+.settings-list { flex: 1; overflow-y: auto; width: 100%; padding-bottom: 40px; scrollbar-width: none; }
+.settings-list::-webkit-scrollbar { display: none; }
+
+.settings-card { padding: 0; overflow: hidden; }
+.setting-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; min-height: 56px; }
+.setting-divider { height: 1px; background: var(--border-glass); margin-left: 20px; }
+
+.icon-btn, .icon-btn-sm { 
+    background: transparent; border: none; color: var(--text-primary); 
+    font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.icon-btn-sm { font-size: 20px; padding: 8px; border-radius: 50%; background: var(--bg-glass); }
+
+/* iOS Switch */
+.ios-switch { position: relative; display: inline-block; width: 51px; height: 31px; }
+.ios-switch input { opacity: 0; width: 0; height: 0; }
+.ios-slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 34px;
+}
+.ios-slider:before {
+    position: absolute; content: ""; height: 27px; width: 27px; left: 2px; bottom: 2px;
+    background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+}
+input:checked + .ios-slider { background-color: var(--accent-green); }
+input:checked + .ios-slider:before { transform: translateX(20px); }
+
+/* iOS Inputs */
+.ios-input {
+    background: transparent; border: none; color: var(--accent-blue);
+    text-align: right; font-family: inherit; font-size: 17px; width: 80px; font-weight: 500;
+}
+.ios-range {
+    -webkit-appearance: none; width: 140px; height: 4px; border-radius: 2px;
+    background: rgba(255,255,255,0.1); outline: none;
+}
+.ios-range::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%;
+    background: white; cursor: pointer; box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+}
+
+.danger-btn-text { background: transparent; border: none; color: var(--accent-red); font-size: 17px; width: 100%; padding: 16px; cursor: pointer; }
+
 @keyframes fadeIn { to { opacity: 1; } }
+
 
 
 .hex-badge {
