@@ -1,9 +1,23 @@
+// rlight Firebase Configuration
+const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "rlight-portal.firebaseapp.com",
+    projectId: "rlight-portal",
+    storageBucket: "rlight-portal.appspot.com",
+    messagingSenderId: "SEU_SENDER_ID",
+    appId: "SEU_APP_ID"
+};
+
+let auth = null;
+
 class UIController {
     constructor() {
         this.currentState = "IDLE";
         this.socket = null;
         this.reconnectTimer = null;
         this.lastHeartbeat = Date.now();
+        this.authenticated = false;
+        this.user = null;
         
         // Timers and intervals
         this.timers = {};
@@ -37,6 +51,43 @@ class UIController {
         this.initClock();
         this.initConnectionMonitor();
         this.initWebSocket();
+        this.initAuth();
+    }
+
+    initAuth() {
+        if (!window.FirebaseSDK) return;
+        const { getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence, GoogleAuthProvider, signInWithPopup, signOut, initializeApp } = window.FirebaseSDK;
+        
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+
+        // Garantir persistência local (estilo Apple "lembrar de mim")
+        setPersistence(auth, browserLocalPersistence);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log("[Auth] User logged in:", user.email);
+                this.authenticated = true;
+                this.user = user;
+                // Se estava na tela de login, vai para IDLE
+                if (this.currentState === "LOGIN") this.transitionTo("IDLE");
+            } else {
+                console.log("[Auth] User logged out");
+                this.authenticated = false;
+                this.user = null;
+                this.transitionTo("LOGIN");
+            }
+        });
+
+        const btnLogin = document.getElementById("btn-google-login");
+        if (btnLogin) {
+            btnLogin.onclick = () => {
+                const provider = new GoogleAuthProvider();
+                signInWithPopup(auth, provider).catch(err => {
+                    console.error("[Auth] Login error:", err);
+                });
+            };
+        }
     }
 
     initClock() {
@@ -183,6 +234,11 @@ class UIController {
     }
 
     transitionTo(newState, payload = {}) {
+        // Auth Guard: Se não autenticado, força LOGIN (exceto se já estiver tentando logar)
+        if (!this.authenticated && newState !== "LOGIN") {
+            newState = "LOGIN";
+        }
+
         if (this.currentState === newState) return;
         console.log(`[UI] State Transition: ${this.currentState} -> ${newState}`);
         
@@ -408,16 +464,16 @@ class UIController {
     }
 }
 
-// Initializer
-window.onload = () => {
-    window.appUI = new UIController();
+// Global Instance
+let controller = null;
+document.addEventListener('DOMContentLoaded', () => {
+    controller = new UIController();
     
     // Tapo door bell mockup button interaction
     document.getElementById("btn-interfone").addEventListener("click", () => {
         console.log("SENDING MQTT REQUEST TO RING TAPO");
-        // To route this to python, we could send a websocket message
-        if(window.appUI.socket && window.appUI.socket.readyState === WebSocket.OPEN) {
-            window.appUI.socket.send(JSON.stringify({ action: "ring_bell" }));
+        if(controller.socket && controller.socket.readyState === WebSocket.OPEN) {
+            controller.socket.send(JSON.stringify({ action: "ring_bell" }));
         }
     });
-};
+});
