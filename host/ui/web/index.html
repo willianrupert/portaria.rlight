@@ -33,6 +33,7 @@
             <span id="ui-hud-state" class="state-label"></span>
         </div>
         <div class="hud-right">
+            <button id="ui-btn-settings" class="icon-btn-sm tertiary" style="display: none;">⚙</button>
             <div id="ui-online-dot" class="status-dot"></div>
             <div class="time-block">
                 <div class="clock"><span id="ui-clock-hm">00:00</span><span id="ui-clock-s">:00</span></div>
@@ -337,6 +338,70 @@
             <div class="instruction-group mt-auto mb-10">
                 <svg class="arrow-icon bounce-down yellow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13"></polyline><polyline points="7 6 12 11 17 6"></polyline></svg>
                 <p class="caption yellow mt-4">Aperte a campainha</p>
+            </div>
+        </section>
+
+        <!-- 17: SETTINGS (iOS Style) -->
+        <section id="screen-SETTINGS" class="screen">
+            <header class="screen-header mb-6">
+                <button id="btn-settings-back" class="icon-btn">✕</button>
+                <h1 class="title">Ajustes</h1>
+                <div style="width: 48px;"></div> <!-- spacer -->
+            </header>
+            
+            <div class="settings-list">
+                <div class="settings-group">
+                    <h3 class="caption tertiary mb-2 ml-4">ACESSOS E TRAVAS</h3>
+                    <div class="glass-card settings-card">
+                        <div class="setting-item">
+                            <span class="body-text">Ativar Strike P2</span>
+                            <label class="ios-switch">
+                                <input type="checkbox" id="cfg-enable-p2">
+                                <span class="ios-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-divider"></div>
+                        <div class="setting-item">
+                            <span class="body-text">Tempo P1 (ms)</span>
+                            <input type="number" id="cfg-p1-ms" class="ios-input" value="3000">
+                        </div>
+                        <div class="setting-divider"></div>
+                        <div class="setting-item">
+                            <span class="body-text">Tempo P2 (ms)</span>
+                            <input type="number" id="cfg-p2-ms" class="ios-input" value="3000">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group mt-8">
+                    <h3 class="caption tertiary mb-2 ml-4">HARDWARE V8</h3>
+                    <div class="glass-card settings-card">
+                        <div class="setting-item">
+                            <span class="body-text">Brilho LED Halo</span>
+                            <input type="range" id="cfg-led-brt" min="0" max="255" class="ios-range">
+                        </div>
+                        <div class="setting-divider"></div>
+                        <div class="setting-item">
+                            <span class="body-text">Pulso Portão (ms)</span>
+                            <input type="number" id="cfg-gate-ms" class="ios-input" value="500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group mt-8">
+                    <h3 class="caption tertiary mb-2 ml-4">SISTEMA</h3>
+                    <div class="glass-card settings-card">
+                        <div class="setting-item">
+                            <span class="body-text">Modo Manutenção</span>
+                            <label class="ios-switch">
+                                <input type="checkbox" id="cfg-maint">
+                                <span class="ios-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-divider"></div>
+                        <button id="btn-logout" class="danger-btn-text mt-2">Finalizar Sessão</button>
+                    </div>
+                </div>
             </div>
         </section>
 
