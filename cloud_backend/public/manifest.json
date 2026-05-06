@@ -1,0 +1,16 @@
+{
+  "short_name": "RLight Portal",
+  "name": "RLight Portaria Digital",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#080810",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#080810"
+}
