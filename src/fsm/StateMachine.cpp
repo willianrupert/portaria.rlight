@@ -10,6 +10,7 @@
 #include "../crypto/JwtSigner.h"
 #include "../sensors/QRReader.h"
 #include <Preferences.h>
+#include "../sensors/KeypadHandler.h"
 
 StateMachine& StateMachine::instance() { static StateMachine i; return i; }
 State             StateMachine::current() const { return _ctx.state; }
@@ -43,6 +44,9 @@ const char* StateMachine::stateToString(State s) {
     case State::REVERSE_PICKUP: return "REVERSE_PICKUP";
     case State::DOOR_ALERT: return "DOOR_ALERT";
     case State::ERROR: return "ERROR";
+    case State::WAITING_PASS: return "WAITING_PASS";
+    case State::LOCKOUT_KEYPAD: return "LOCKOUT_KEYPAD";
+    case State::OUT_OF_HOURS: return "OUT_OF_HOURS";
     default: return "UNKNOWN";
   }
 }
@@ -57,6 +61,8 @@ void StateMachine::_onEnter(State s) {
     case State::RECEIPT:     Buzzer::melody_success(); Led::btn().breathe(500); break;
     case State::DOOR_ALERT:  Buzzer::continuous(true); break;
     case State::ABORTED:     Buzzer::beep(3,200);      break;
+    case State::WAITING_PASS: Led::btn().blink(100); Buzzer::beep(1, 50); break;
+    case State::LOCKOUT_KEYPAD: Led::btn().blink(1000); Buzzer::beep(3, 300); break;
     default: break;
   }
 }
@@ -74,6 +80,31 @@ void StateMachine::tick(const PhysicalState& world) {
   }
   if (!cfg.maintenance_mode && _ctx.state == State::MAINTENANCE) {
     transition(State::IDLE); return;
+  }
+
+  // LOCKOUT check
+  if (_ctx.lockout_until > 0) {
+    if (millis() < _ctx.lockout_until) {
+      if (_ctx.state != State::LOCKOUT_KEYPAD) transition(State::LOCKOUT_KEYPAD);
+      return;
+    } else {
+      _ctx.lockout_until = 0;
+      _ctx.keypad_fails = 0;
+      transition(State::IDLE);
+      return;
+    }
+  }
+
+  // OUT_OF_HOURS check (simplificado para demonstração v8, requer RTC sync)
+  // if (isOutOfHours() && _ctx.state != State::OUT_OF_HOURS && !isDeliveryInProgress()) {
+  //   transition(State::OUT_OF_HOURS); return;
+  // }
+
+  // Teclado (v8): Transição rápida se houver input pendente
+  if ((_ctx.state == State::IDLE || _ctx.state == State::AWAKE) && 
+      KeypadHandler::instance().getPendingLength() > 0) {
+    transition(State::WAITING_PASS);
+    return;
   }
 
   // WIEGAND: processado em qualquer estado exceto durante entrega ativa
@@ -151,6 +182,9 @@ void StateMachine::tick(const PhysicalState& world) {
     case State::RESIDENT_P2:   _handleResidentP2(world);   break;
     case State::REVERSE_PICKUP:_handleReversePickup(world);break;
     case State::DOOR_ALERT:   _handleDoorAlert(world);    break;
+    case State::WAITING_PASS: _handleWaitingPass(world);  break;
+    case State::LOCKOUT_KEYPAD:_handleLockoutKeypad(world);break;
+    case State::OUT_OF_HOURS: _handleOutOfHours(world);   break;
     default: break;
   }
 }
@@ -166,7 +200,7 @@ void StateMachine::_handleIdle(const PhysicalState& w) {
 
   // Botão Interno P2 (v8): Liberação imediata para saída do morador
   if (w.int_button_pressed) {
-    Strike::P2().open(ConfigManager::instance().cfg.door_open_ms);
+    Strike::P2().open(ConfigManager::instance().cfg.p2_open_ms);
     Buzzer::beep(1, 100);
     UsbBridge::instance().sendEvent("INTERNAL_P2_RELEASE", _ctx);
     // Nota: Não transita estado, apenas libera a trava. 
@@ -444,7 +478,7 @@ void StateMachine::_handleResidentP2(const PhysicalState& w) {
   if (cfg.enable_strike_p2) {
     // Verifica interbloqueio P1 uma última vez
     if (!w.p1_open && w.ina_p1_ma < cfg.ina_strike_min_ma) {
-      Strike::P2().open(cfg.door_open_ms);
+      Strike::P2().open(cfg.p2_open_ms);
       Buzzer::beep(1, 200);
       Led::btn().solid(255);
     }
@@ -501,4 +535,71 @@ void StateMachine::_handleReversePickup(const PhysicalState& w) {
 
   // Monitora variação de peso atual para capturar o momento de esvaziamento (negativa)
   _ctx.reverse_weight_delta = w.weight_g - _ctx.weight_g;
+}
+
+void StateMachine::_handleWaitingPass(const PhysicalState& w) {
+  auto& cfg = ConfigManager::instance().cfg;
+
+  // Timeout: parou de digitar
+  if (millis() - _ctx.state_enter > cfg.qr_timeout_ms) {
+    KeypadHandler::instance().getCode(); // limpa buffer
+    transition(State::IDLE);
+    return;
+  }
+
+  String code = KeypadHandler::instance().getCode();
+  if (code.length() > 0) {
+    AccessResult res = AccessController::instance().validate(code.c_str());
+    
+    if (res.type == AccessType::NONE) {
+      _ctx.keypad_fails++;
+      Buzzer::beep(3, 100);
+      if (_ctx.keypad_fails >= 5) {
+        _ctx.lockout_until = millis() + 300000; // 5 min
+        transition(State::LOCKOUT_KEYPAD);
+      } else {
+        transition(State::IDLE);
+      }
+      return;
+    }
+
+    if (res.type == AccessType::RESIDENT) {
+      _ctx.resident_access_type = res.type;
+      strlcpy(_ctx.resident_label, res.label, sizeof(_ctx.resident_label));
+      if (!w.p2_open) {
+        Strike::P1().open(cfg.door_open_ms);
+        Buzzer::beep(2, 150);
+        transition(State::RESIDENT_P1);
+      } else {
+        UsbBridge::instance().sendAlert("RESIDENT_INTERLOCK_P2", _ctx);
+        transition(State::IDLE);
+      }
+      return;
+    }
+
+    // Reversa via Teclado
+    if (res.type >= AccessType::REVERSE_CORREIOS && res.type <= AccessType::REVERSE_GENERIC) {
+      strlcpy(_ctx.reverse_carrier, 
+        res.type == AccessType::REVERSE_CORREIOS ? "CORREIOS" : "CARRIER", 
+        sizeof(_ctx.reverse_carrier));
+      _ctx.weight_g = w.weight_g;
+      if (!w.p2_open) {
+        Strike::P1().open(cfg.door_open_ms);
+        Buzzer::beep(1, 100);
+        _ctx.carrier[0] = 'R';
+        transition(State::AUTHORIZED);
+      }
+      return;
+    }
+  }
+}
+
+void StateMachine::_handleLockoutKeypad(const PhysicalState& w) {
+  // Apenas aguarda o timeout no tick()
+  (void)w;
+}
+
+void StateMachine::_handleOutOfHours(const PhysicalState& w) {
+  // A definir transição de volta quando entrar no horário
+  (void)w;
 }

@@ -19,7 +19,10 @@ enum class State {
   RESIDENT_P2,    // NOVO: morador P2
   REVERSE_PICKUP, // NOVO: coletor reversa
   DOOR_ALERT,     // P1 aberta > timeout
-  ERROR           // falha crítica bloqueante
+  ERROR,           // falha crítica bloqueante
+  WAITING_PASS,   // digitando senha (v8)
+  LOCKOUT_KEYPAD, // teclado bloqueado (v8)
+  OUT_OF_HOURS    // fora do horário comercial (v8)
 };
 
 struct FsmContext {
@@ -56,6 +59,8 @@ struct FsmContext {
   bool     mmwave_fallback_used= false;
   
   uint32_t resident_p2_timer  = 0;   // início do delay de 2s para P2
+  uint8_t  keypad_fails       = 0;   // contador de tentativas falhas (v8)
+  uint32_t lockout_until      = 0;   // tempo de desbloqueio (v8)
 };
 
 class StateMachine {
@@ -89,4 +94,7 @@ private:
   void _handleResidentP2(const PhysicalState& w);
   void _handleReversePickup(const PhysicalState& w);
   void _handleDoorAlert(const PhysicalState& w);
+  void _handleWaitingPass(const PhysicalState& w);
+  void _handleLockoutKeypad(const PhysicalState& w);
+  void _handleOutOfHours(const PhysicalState& w);
 };

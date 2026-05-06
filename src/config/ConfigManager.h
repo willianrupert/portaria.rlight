@@ -5,7 +5,11 @@
 
 struct SystemConfig {
   // ── Thresholds operacionais (alteráveis via HA) ─────────────────
-  uint32_t door_open_ms          = 3000;    // pulso do strike P1 e P2 (se habilitado)
+  uint32_t door_open_ms          = 3000;    // pulso do strike P1
+  uint32_t p2_open_ms            = 3000;    // pulso do strike P2
+  uint32_t gate_relay_ms         = 500;     // pulso do relé do portão Garen
+  uint32_t led_btn_breathe_ms    = 2000;    // período PWM do LED do botão
+  uint32_t led_btn_brightness_max= 200;     // brilho máximo PWM
   uint32_t awake_timeout_ms      = 60000;   // AWAKE sem ação → IDLE
   uint32_t qr_timeout_ms         = 30000;   // WAITING_QR sem leitura → IDLE
   uint32_t door_alert_ms         = 90000;   // P1 aberta → DOOR_ALERT
@@ -45,6 +49,10 @@ public:
     Preferences p;
     p.begin("rlcfg", true);
     cfg.door_open_ms          = p.getUInt ("door_ms",    3000);
+    cfg.p2_open_ms            = p.getUInt ("p2_open_ms", 3000);
+    cfg.gate_relay_ms         = p.getUInt ("gate_ms",    500);
+    cfg.led_btn_breathe_ms    = p.getUInt ("btn_breath", 2000);
+    cfg.led_btn_brightness_max= p.getUInt ("btn_brt",    200);
     cfg.awake_timeout_ms      = p.getUInt ("awake_ms",   60000);
     cfg.qr_timeout_ms         = p.getUInt ("qr_ms",      30000);
     cfg.door_alert_ms         = p.getUInt ("alert_ms",   90000);
@@ -88,6 +96,10 @@ public:
         if(v!=cfg.field){ cfg.field=v; p.putBool(k,v); } }
 
     UPD_UINT ("door_ms",    door_open_ms)
+    UPD_UINT ("p2_open_ms", p2_open_ms)
+    UPD_UINT ("gate_ms",    gate_relay_ms)
+    UPD_UINT ("btn_breath", led_btn_breathe_ms)
+    UPD_UINT ("btn_brt",    led_btn_brightness_max)
     UPD_UINT ("awake_ms",   awake_timeout_ms)
     UPD_UINT ("qr_ms",      qr_timeout_ms)
     UPD_UINT ("alert_ms",   door_alert_ms)

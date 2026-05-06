@@ -128,15 +128,7 @@ void taskSensorHub(void* p) {
     }
 
     KeypadHandler::instance().update();
-    String code_kp = KeypadHandler::instance().getCode();
-    if (code_kp.length() > 0) {
-      s.keypad_granted = true;
-      AccessResult res = AccessController::instance().validate(code_kp.c_str());
-      s.keypad_access.type = res.type;
-      strlcpy(s.keypad_access.label, res.label, sizeof(s.keypad_access.label));
-    } else {
-      s.keypad_granted = false;
-    }
+    s.keypad_granted = false; // Reset flag legada. v8 usa WAITING_PASS na FSM.
 
     // D. Escrita na Memória Compartilhada
     SharedMemory::instance().update(s);

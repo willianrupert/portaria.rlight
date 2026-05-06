@@ -4,7 +4,36 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "mbedtls/sha256.h"
+
 AccessController& AccessController::instance() { static AccessController i; return i; }
+
+static void computeHash(const char* input, char* output_hex) {
+    mbedtls_sha256_context ctx;
+    mbedtls_sha256_init(&ctx);
+    mbedtls_sha256_starts(&ctx, 0);
+    
+    const char* salt = "rlight_v8_secure_salt_";
+    mbedtls_sha256_update(&ctx, (const unsigned char*)salt, strlen(salt));
+    mbedtls_sha256_update(&ctx, (const unsigned char*)input, strlen(input));
+    
+    unsigned char hash[32];
+    mbedtls_sha256_finish(&ctx, hash);
+    mbedtls_sha256_free(&ctx);
+    
+    for (int i = 0; i < 32; i++) {
+        sprintf(output_hex + (i * 2), "%02x", hash[i]);
+    }
+    output_hex[64] = '\0';
+}
+
+static void buildKey(const char* code, char* key_out) {
+    char hash_hex[65];
+    computeHash(code, hash_hex);
+    // Limite do NVS Preferences key é 15 chars (+ \0 = 16)
+    // Usamos o prefixo k_ e os primeiros 11 chars do hash
+    snprintf(key_out, 15, "k_%.11s", hash_hex);
+}
 
 bool AccessController::canAttempt() {
   if (_cooldown_until > 0) {
@@ -46,9 +75,8 @@ AccessResult AccessController::validate(const char* code) {
     return result;
   }
 
-  // Constrói chave NVS: "key_XXXXXXXX"
-  char key[32];
-  snprintf(key, sizeof(key), "key_%s", code);
+  char key[16];
+  buildKey(code, key);
 
   Preferences p;
   p.begin("access_db", true); // read-only
@@ -73,8 +101,6 @@ AccessResult AccessController::validate(const char* code) {
   const char* colon = strchr(val, ':');
   if (colon) {
     size_t type_len = colon - val;
-    // O strlen(type_str) max is sizeof(type_str)-1. 
-    // Usamos min para evitar overflow se type_len for anormal
     size_t len_to_copy = (type_len < sizeof(type_str) - 1) ? type_len : sizeof(type_str) - 1;
     strncpy(type_str, val, len_to_copy);
     type_str[len_to_copy] = '\0';
@@ -95,8 +121,8 @@ AccessResult AccessController::validate(const char* code) {
 }
 
 bool AccessController::addCode(const char* code, const char* type_label) {
-  char key[32];
-  snprintf(key, sizeof(key), "key_%s", code);
+  char key[16];
+  buildKey(code, key);
   Preferences p;
   p.begin("access_db", false);
   size_t written = p.putString(key, type_label);
@@ -105,8 +131,8 @@ bool AccessController::addCode(const char* code, const char* type_label) {
 }
 
 bool AccessController::removeCode(const char* code) {
-  char key[32];
-  snprintf(key, sizeof(key), "key_%s", code);
+  char key[16];
+  buildKey(code, key);
   Preferences p;
   p.begin("access_db", false);
   bool ok = p.remove(key);

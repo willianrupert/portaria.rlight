@@ -22,6 +22,9 @@ public:
     // Retorna código completo se finalizado com #, ou string vazia.
     String getCode();
 
+    // Retorna a quantidade de dígitos já digitados no buffer parcial
+    int getPendingLength();
+
 private:
     uint8_t _addr;
     uint32_t _last_scan = 0;

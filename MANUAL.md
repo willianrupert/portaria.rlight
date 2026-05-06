@@ -32,7 +32,7 @@ Abaixo estão os componentes técnicos exatos para a construção da portaria:
 ### Atuadores e Interface
 *   **1x Display:** Tela LCD TFT 7" polegadas (1024x600) com interface micro-HDMI.
 *   **1x Módulo Relé de 1 Canal:** Relé de contato seco isolado (Apenas para pulso na botoeira do motor do portão).
-*   **Módulos MOSFET (Isolamento Óptico):** Placa de acionamento em estado sólido (PWM/DC) para controle das Travas Strike P1, P2 e do Cooler 40mm, sem desgaste mecânico.
+*   **Módulos MOSFET (Isolamento Óptico):** Placa de acionamento em estado sólido (PWM/DC) para controle das Travas Strike P1, P2, do Cooler 40mm e a modulação (PWM) do LED Halo do botão externo, sem desgaste mecânico.
 *   **2x Travas Eletromagnéticas:** Fechadura "Strike" Fail-Secure 12V (Abre apenas com pulso elétrico).
 *   **1x Botão Push-Button Metálico:** 16mm/19mm NA com LED Halo iluminado (5V/12V).
 *   **1x Botão Push-Button (Saída):** Botão NA para liberação interna da porta P2.

@@ -1,5 +1,7 @@
 // src/sensors/KeypadHandler.cpp
 #include "KeypadHandler.h"
+#include "../comms/UsbBridge.h"
+#include "../fsm/StateMachine.h"
 
 KeypadHandler& KeypadHandler::instance() { static KeypadHandler i; return i; }
 
@@ -65,6 +67,7 @@ void KeypadHandler::update() {
         // Adiciona dígito se não estourar 16 chars
         if (_current_code.length() < 16) {
             _current_code += c;
+            UsbBridge::instance().sendEvent("KEY_PRESSED", StateMachine::instance().ctx());
         }
     }
 }
@@ -73,4 +76,8 @@ String KeypadHandler::getCode() {
     String res = _final_code;
     _final_code = "";
     return res;
+}
+
+int KeypadHandler::getPendingLength() {
+    return _current_code.length();
 }
