@@ -21,6 +21,28 @@ Versões de firmware do ESP32-S3, software do Orange Pi e interface web são num
 
 ---
 
+## [v8.3.0] — Restauração de Estabilidade e Full Immersion iOS
+**Data:** 06 de Maio de 2026
+**Codinome:** *Ilha do Leite — Phoenix*
+**Foco:** Recuperação total de regressão de código, estabilização de hardware e UX PWA definitiva.
+
+### Added
+- **Painel de Controle Remoto (◎)**: Adicionado acesso direto via Dashboard para acionamento manual de Porta P1, Porta P2 e Portão.
+- **Indicadores de Estado de Hardware**: Feedback em tempo real no dashboard para sensores magnéticos (Reed) e estado dos atuadores (Strike/Relay).
+- **Polling Adaptativo**: Sistema de atualização automática a cada 2s com contador de "idade" do dado para garantir confiabilidade na operação remota.
+- **Configurações mmWave Avançadas**: Interface para ajuste fino dos 9 gates de distância (0.75m cada) do sensor LD2410B.
+- **Monitoramento de Corrente INA219**: Thresholds configuráveis para detecção de falha ou obstrução nas travas elétricas.
+- **Gestão de Energia & Térmica**: Configurações para Cooler automático baseado em temperatura do host.
+
+### Fixed
+- **iOS PWA "Black Bar"**: Implementada técnica de `bottom negativo` com `env(safe-area-inset-bottom)` e `-webkit-fill-available` para garantir imersão total em iPhones (incluindo 16 Pro Max), eliminando a barra preta no rodapé.
+- **Sessão Firebase**: Correção no fluxo de redirecionamento OAuth do Google para Safari em modo PWA.
+
+### Notes
+- Esta versão marca o congelamento da interface v8.3 após a restauração bem-sucedida do código original do Claude Sonnet.
+
+---
+
 ## [v8.0.0] — Portaria na Nuvem, Criptografia e Design Premium
 **Data:** 23 de Abril de 2026
 **Codinome:** *Ilha do Leite*
