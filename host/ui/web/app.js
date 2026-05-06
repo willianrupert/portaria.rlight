@@ -1,11 +1,12 @@
 // rlight Firebase Configuration
 const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "rlight-portal.firebaseapp.com",
-    projectId: "rlight-portal",
-    storageBucket: "rlight-portal.appspot.com",
-    messagingSenderId: "SEU_SENDER_ID",
-    appId: "SEU_APP_ID"
+    apiKey: "AIzaSyBD-ux1cy-PL-gVDFoe-gv7_Lwr-dtGrlc",
+    authDomain: "vlab-hub.firebaseapp.com",
+    projectId: "vlab-hub",
+    storageBucket: "vlab-hub.firebasestorage.app",
+    messagingSenderId: "576689633790",
+    appId: "1:576689633790:web:83c51675154ed396c7e8af",
+    measurementId: "G-6GYECK76F7"
 };
 
 let auth = null;
