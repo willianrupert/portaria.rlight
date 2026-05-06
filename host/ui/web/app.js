@@ -69,12 +69,16 @@ class UIController {
                 console.log("[Auth] User logged in:", user.email);
                 this.authenticated = true;
                 this.user = user;
+                const btnGear = document.getElementById("ui-btn-settings");
+                if(btnGear) btnGear.style.display = "flex";
                 // Se estava na tela de login, vai para IDLE
                 if (this.currentState === "LOGIN") this.transitionTo("IDLE");
             } else {
                 console.log("[Auth] User logged out");
                 this.authenticated = false;
                 this.user = null;
+                const btnGear = document.getElementById("ui-btn-settings");
+                if(btnGear) btnGear.style.display = "none";
                 this.transitionTo("LOGIN");
             }
         });
@@ -183,6 +187,18 @@ class UIController {
         }
         else if (data.type === "telemetry_update") {
             this.updateLiveValues(data);
+        }
+    }
+
+    sendParamUpdate(key, value) {
+        if (!this.authenticated) return;
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            console.log(`[UI] Sending Param Update: ${key}=${value}`);
+            this.socket.send(JSON.stringify({
+                action: "update_param",
+                key: key,
+                value: value
+            }));
         }
     }
 
@@ -476,4 +492,33 @@ document.addEventListener('DOMContentLoaded', () => {
             controller.socket.send(JSON.stringify({ action: "ring_bell" }));
         }
     });
+
+    // Settings Navigation
+    document.getElementById("ui-btn-settings").onclick = () => controller.transitionTo("SETTINGS");
+    document.getElementById("btn-settings-back").onclick = () => controller.transitionTo("IDLE");
+
+    // Settings Inputs Listeners
+    const bindToggle = (id, paramKey) => {
+        const el = document.getElementById(id);
+        el.onchange = (e) => controller.sendParamUpdate(paramKey, e.target.checked);
+    };
+    const bindInput = (id, paramKey) => {
+        const el = document.getElementById(id);
+        el.onchange = (e) => controller.sendParamUpdate(paramKey, parseInt(e.target.value));
+    };
+
+    bindToggle("cfg-enable-p2", "enable_strike_p2");
+    bindToggle("cfg-maint", "maintenance_mode");
+    bindInput("cfg-p1-ms", "door_ms");
+    bindInput("cfg-p2-ms", "p2_open_ms");
+    bindInput("cfg-gate-ms", "gate_ms");
+    bindInput("cfg-led-brt", "btn_brt");
+
+    // Logout
+    document.getElementById("btn-logout").onclick = () => {
+        if (window.FirebaseSDK) {
+            const { getAuth, signOut } = window.FirebaseSDK;
+            signOut(getAuth());
+        }
+    };
 });

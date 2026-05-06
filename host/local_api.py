@@ -1,8 +1,10 @@
 import os
 import sqlite3
+import json
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from ui.websocket_manager import ws_manager
+from core.serial_bridge import esp32_bridge
 
 app = FastAPI(title="RLight API Local")
 
@@ -29,8 +31,19 @@ async def websocket_endpoint(websocket: WebSocket):
     await ws_manager.connect(websocket)
     try:
         while True:
-            # Mantém vivo
             data = await websocket.receive_text()
+            try:
+                msg = json.loads(data)
+                if msg.get("action") == "update_param":
+                    key = msg.get("key")
+                    val = msg.get("value")
+                    # Envia para o ESP32 via ponte serial
+                    esp32_bridge.send_cmd("CMD_SET_CONFIG", {key: val})
+                elif msg.get("action") == "ring_bell":
+                    # Lógica de campainha (Tapo) pode ser disparada aqui
+                    print("[API] Campainha acionada via UI")
+            except json.JSONDecodeError:
+                pass
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
 
