@@ -61,6 +61,7 @@ struct FsmContext {
 class StateMachine {
 public:
   static StateMachine& instance();
+  static const char* stateToString(State s);
   void tick(const PhysicalState& world);
   void transition(State next);
   State             current() const;

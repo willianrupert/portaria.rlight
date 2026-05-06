@@ -27,7 +27,7 @@ void JwtSigner::sign(const char* token, const char* qr_code, const char* carrier
     base64url_encode((const unsigned char*)header, strlen(header), header_b64, sizeof(header_b64));
 
     // 2. Payload
-    StaticJsonDocument<256> doc;
+    JsonDocument doc;
     doc["qr"] = qr_code;
     doc["carrier"] = carrier;
     doc["weight"] = weight;

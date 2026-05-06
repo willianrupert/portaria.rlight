@@ -29,7 +29,7 @@ void setup() {
 
   // Inicialização de Middleware e Configs
   SharedMemory::instance().init();
-  ConfigManager::instance().load();
+  ConfigManager::instance().loadAll();
   UsbBridge::instance().init();
 
   // Inicialização de Sensores
@@ -87,6 +87,13 @@ void taskLogicBrain(void* p) {
     Strike::P2().tick(current_p2);
     Strike::Gate().tick(0.0f); // Gate não tem INA monitorado via shunt direto v8
     
+    // 5. Envio de Telemetria Periódica (500ms)
+    static uint32_t last_telemetry = 0;
+    if (millis() - last_telemetry >= 500) {
+      UsbBridge::instance().sendTelemetry(world, StateMachine::instance().ctx());
+      last_telemetry = millis();
+    }
+    
     vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(10)); // 100Hz
   }
 }
@@ -109,22 +116,24 @@ void taskSensorHub(void* p) {
 
     // B. Sensores Analógicos / Serial
     s.weight_g = Scale::instance().readOne();
-    s.person_present = MmWave::instance().readPresence();
+    s.person_present = MmWave::instance().personPresent();
     
     // C. QR Reader e Keypad (v7/v8)
-    QRReader::instance().update();
-    if (QRReader::instance().hasCode()) {
-      strlcpy(s.qr_code, QRReader::instance().getCode(), sizeof(s.qr_code));
-      strlcpy(s.carrier, QRReader::instance().getCarrier(), sizeof(s.carrier));
+    const char* code_qr = QRReader::instance().poll();
+    if (code_qr && strlen(code_qr) > 0) {
+      strlcpy(s.qr_code, code_qr, sizeof(s.qr_code));
+      QRReader::identifyCarrier(code_qr, s.carrier, sizeof(s.carrier));
     } else {
       s.qr_code[0] = '\0';
     }
 
     KeypadHandler::instance().update();
-    String code = KeypadHandler::instance().getCode();
-    if (code.length() > 0) {
+    String code_kp = KeypadHandler::instance().getCode();
+    if (code_kp.length() > 0) {
       s.keypad_granted = true;
-      s.keypad_access = AccessController::instance().validate(code.c_str());
+      AccessResult res = AccessController::instance().validate(code_kp.c_str());
+      s.keypad_access.type = res.type;
+      strlcpy(s.keypad_access.label, res.label, sizeof(s.keypad_access.label));
     } else {
       s.keypad_granted = false;
     }

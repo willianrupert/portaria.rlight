@@ -76,14 +76,14 @@ void UsbBridge::_dispatch(const char* raw) {
     }
   }
   else if (!strcmp(cmd, "CMD_ADD_WIEGAND_CODE")) {
-    uint32_t code  = doc["code"].as<uint32_t>();
+    String code = doc["code"].as<String>();
     const char* tl = doc["type_label"] | "RESIDENT:Morador";
-    bool ok = AccessController::instance().addCode(code, tl);
+    bool ok = AccessController::instance().addCode(code.c_str(), tl);
     if(ok) sendEvent("WIEGAND_CODE_ADDED", fsm.ctx());
   }
   else if (!strcmp(cmd, "CMD_REMOVE_WIEGAND_CODE")) {
-    uint32_t code = doc["code"].as<uint32_t>();
-    bool ok = AccessController::instance().removeCode(code);
+    String code = doc["code"].as<String>();
+    bool ok = AccessController::instance().removeCode(code.c_str());
     if(ok) sendEvent("WIEGAND_CODE_REMOVED", fsm.ctx());
   }
   else if (!strcmp(cmd, "CMD_LIST_WIEGAND_CODES")) {
@@ -115,11 +115,81 @@ void UsbBridge::_dispatch(const char* raw) {
   }
 }
 
-// Stubs for JSON emissions:
-void UsbBridge::sendHeartbeat(const FsmContext& ctx) { /* Serial.println */ }
-void UsbBridge::sendState(State s, const FsmContext& ctx) { /* ... */ }
-void UsbBridge::sendAlert(const char* alert_type, const FsmContext& ctx) { /* ... */ }
-void UsbBridge::sendPushAlert(const char* alert_type, const FsmContext& ctx) { /* ... */ }
-void UsbBridge::sendEvent(const char* evt, const FsmContext& ctx) { /* ... */ }
-void UsbBridge::sendDelivery(const FsmContext& ctx, const PhysicalState& w, const char* jwt) { /* ... */ }
-void UsbBridge::sendReversePickup(const FsmContext& ctx, const PhysicalState& w, const char* jwt) { /* ... */ }
+// --- Emissões JSON Reais via Serial ---
+
+void UsbBridge::sendHeartbeat(const FsmContext& ctx) {
+  JsonDocument doc;
+  doc["type"] = "HEARTBEAT";
+  doc["ts"]   = ctx.unix_time;
+  serializeJson(doc, Serial);
+  Serial.println();
+}
+
+void UsbBridge::sendTelemetry(const PhysicalState& w, const FsmContext& ctx) {
+  JsonDocument doc;
+  doc["type"]      = "TELEMETRY";
+  doc["state"]     = StateMachine::stateToString(ctx.state);
+  doc["weight"]    = w.weight_g;
+  doc["p1_open"]   = w.p1_open;
+  doc["p2_open"]   = w.p2_open;
+  doc["gate_open"] = w.gate_open;
+  doc["int_button_pressed"] = w.int_button_pressed;
+  
+  if (strlen(ctx.carrier) > 0) doc["carrier"] = ctx.carrier;
+  if (strlen(ctx.resident_label) > 0) doc["resident_label"] = ctx.resident_label;
+  
+  serializeJson(doc, Serial);
+  Serial.println();
+}
+
+void UsbBridge::sendState(State s, const FsmContext& ctx) {
+  JsonDocument doc;
+  doc["type"]  = "STATE_CHANGE";
+  doc["state"] = StateMachine::stateToString(s);
+  serializeJson(doc, Serial);
+  Serial.println();
+}
+
+void UsbBridge::sendAlert(const char* alert_type, const FsmContext& ctx) {
+  JsonDocument doc;
+  doc["type"]  = "ALERT";
+  doc["alert"] = alert_type;
+  serializeJson(doc, Serial);
+  Serial.println();
+}
+
+void UsbBridge::sendPushAlert(const char* alert_type, const FsmContext& ctx) {
+  JsonDocument doc;
+  doc["type"]  = "PUSH_ALERT";
+  doc["alert"] = alert_type;
+  serializeJson(doc, Serial);
+  Serial.println();
+}
+
+void UsbBridge::sendEvent(const char* evt, const FsmContext& ctx) {
+  JsonDocument doc;
+  doc["type"]  = "EVENT";
+  doc["event"] = evt;
+  serializeJson(doc, Serial);
+  Serial.println();
+}
+
+void UsbBridge::sendDelivery(const FsmContext& ctx, const PhysicalState& w, const char* jwt) {
+  JsonDocument doc;
+  doc["type"]    = "DELIVERY";
+  doc["jwt"]     = jwt;
+  doc["weight"]  = ctx.weight_g;
+  doc["carrier"] = ctx.carrier;
+  serializeJson(doc, Serial);
+  Serial.println();
+}
+
+void UsbBridge::sendReversePickup(const FsmContext& ctx, const PhysicalState& w, const char* jwt) {
+  JsonDocument doc;
+  doc["type"]    = "REVERSE_PICKUP";
+  doc["jwt"]     = jwt;
+  doc["weight"]  = w.weight_g;
+  doc["carrier"] = ctx.reverse_carrier;
+  serializeJson(doc, Serial);
+  Serial.println();
+}

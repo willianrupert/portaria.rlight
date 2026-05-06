@@ -28,6 +28,14 @@ def broadcast_ui_config():
         "msg_door_alert": dynamic_texts.MSG_DOOR_ALERT
     })
 
+def broadcast_telemetry():
+    """Envia os dados físicos vitais (portão, peso) periodicamente para o frontend."""
+    ws_manager.broadcast_sync({
+        "type": "telemetry_update",
+        "gate_open": host_fsm.get_gate_open(),
+        "weight_g": host_fsm.get_weight()
+    })
+
 def on_state_transition(new_state, old_state):
     """Hook chamado sempre que a FSM do microcontrolador mudar."""
     print(f"[Core FSM] Transição: {old_state} -> {new_state}")
@@ -100,6 +108,10 @@ def main():
             # Broadcast periódico de configs para garantir sincronia na UI Web
             if tick_count % 20 == 0:  # 20 * 0.05s = 1 segundo
                 broadcast_ui_config()
+                
+            # Broadcast frequente de telemetria (portão, peso)
+            if tick_count % 10 == 0:  # 10 * 0.05s = 0.5 segundo
+                broadcast_telemetry()
                 
             tick_count += 1
             time.sleep(0.05)

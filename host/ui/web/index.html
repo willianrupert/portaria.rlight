@@ -23,8 +23,11 @@
 
     <!-- HUD Global -->
     <header id="global-hud">
-        <div class="hud-left">
+        <div class="hud-left" style="display: flex; align-items: center; gap: 10px;">
             <span class="logo-text">rlight</span>
+            <div id="ui-gate-badge" class="pill orange-pill" style="display: none; padding: 4px 8px;">
+                <span class="caption orange">Portão Aberto</span>
+            </div>
         </div>
         <div class="hud-center">
             <span id="ui-hud-state" class="state-label"></span>

@@ -130,9 +130,20 @@ class UIController {
             this.updateLiveValues(data);
             this.transitionTo(data.state, data);
         }
+        else if (data.type === "telemetry_update") {
+            this.updateLiveValues(data);
+        }
     }
 
     updateLiveValues(data) {
+        // Update Gate Status
+        if (data.gate_open !== undefined) {
+            const badge = document.getElementById("ui-gate-badge");
+            if (badge) {
+                badge.style.display = data.gate_open ? "inline-block" : "none";
+            }
+        }
+
         // Update Weight
         if (data.weight_g !== undefined) {
             let kg = (data.weight_g / 1000).toFixed(2);

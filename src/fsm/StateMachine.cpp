@@ -25,6 +25,28 @@ void StateMachine::transition(State next) {
   UsbBridge::instance().sendState(next, _ctx);
 }
 
+const char* StateMachine::stateToString(State s) {
+  switch(s) {
+    case State::IDLE: return "IDLE";
+    case State::MAINTENANCE: return "MAINTENANCE";
+    case State::AWAKE: return "AWAKE";
+    case State::WAITING_QR: return "WAITING_QR";
+    case State::AUTHORIZED: return "AUTHORIZED";
+    case State::INSIDE_WAIT: return "INSIDE_WAIT";
+    case State::DELIVERING: return "DELIVERING";
+    case State::DOOR_REOPENED: return "DOOR_REOPENED";
+    case State::CONFIRMING: return "CONFIRMING";
+    case State::RECEIPT: return "RECEIPT";
+    case State::ABORTED: return "ABORTED";
+    case State::RESIDENT_P1: return "RESIDENT_P1";
+    case State::RESIDENT_P2: return "RESIDENT_P2";
+    case State::REVERSE_PICKUP: return "REVERSE_PICKUP";
+    case State::DOOR_ALERT: return "DOOR_ALERT";
+    case State::ERROR: return "ERROR";
+    default: return "UNKNOWN";
+  }
+}
+
 void StateMachine::_onEnter(State s) {
   switch (s) {
     case State::IDLE:        Led::btn().breathe(2000); Led::qr().off(); break;

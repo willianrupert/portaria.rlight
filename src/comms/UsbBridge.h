@@ -13,6 +13,7 @@ public:
   bool screenReady() const { return _scr_rdy; }
 
   void sendHeartbeat(const FsmContext& ctx);
+  void sendTelemetry(const PhysicalState& w, const FsmContext& ctx);
   void sendState(State s, const FsmContext& ctx);
   void sendAlert(const char* alert_type, const FsmContext& ctx);
   void sendPushAlert(const char* alert_type, const FsmContext& ctx);
