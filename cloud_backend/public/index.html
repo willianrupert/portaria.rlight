@@ -21,7 +21,13 @@
   function applyBottom(px) {
     var panel = document.querySelector('.panel');
     if (panel) panel.style.bottom = '-' + Math.max(0, px) + 'px';
+    document.documentElement.style.setProperty('--sab', px + 'px');
   }
+
+  // Define CSS variable immediately before DOM is ready
+  var cached = parseFloat(localStorage.getItem(KEY));
+  var sab = (isNaN(cached) || cached <= 0) ? 34 : cached;
+  document.documentElement.style.setProperty('--sab', sab + 'px');
 
   function measureEnv() {
     var probe = document.createElement('div');
@@ -97,7 +103,7 @@ body {
   min-height: 100vh;
   min-height: -webkit-fill-available;
   margin: 0; padding: 0; overflow: hidden;
-  color: var(--fg); background: transparent;
+  color: var(--fg); background: var(--bg);
   display: flex; align-items: center; justify-content: center;
 }
 
@@ -116,7 +122,7 @@ body {
 .panel {
   position: fixed;
   top: 0; left: 0; right: 0;
-  bottom: 0; /* JS aplica inline o valor correto via localStorage */
+  bottom: calc(-1 * var(--sab, 34px)); /* CSS variable with fallback */
   z-index: 1;
   background: var(--glass);
   backdrop-filter: blur(60px);
