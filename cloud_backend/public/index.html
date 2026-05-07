@@ -72,12 +72,12 @@ body {
 /* ── PAINEL PRINCIPAL (mobile < 601px) ──────────────── */
 .panel {
   position: fixed;
-  /* Tentativa 14: full viewport + force compositing layer to avoid WebKit snapshot bug */
+  /* Tentativa 15: usar height explícito em vez de top/bottom para cobrir viewport */
   top: 0;
-  bottom: 0;
   left: 0;
   right: 0;
-  will-change: transform; /* Hint browser to keep layer composited */
+  height: 100vh;
+  height: -webkit-fill-available;
   z-index: 1;
   background: var(--glass);
   backdrop-filter: blur(60px);
@@ -88,8 +88,6 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  transform: translateZ(0); /* Force compositing layer */
-  -webkit-transform: translateZ(0);
   padding-top: max(44px, env(safe-area-inset-top, 44px));
   padding-bottom: max(34px, env(safe-area-inset-bottom, 34px));
   padding-left: max(16px, env(safe-area-inset-left, 16px));
