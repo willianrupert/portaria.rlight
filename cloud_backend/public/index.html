@@ -14,46 +14,6 @@
 <title>RLight — Portaria Digital</title>
 <link rel="icon" type="image/png" href="/favicon.png?v=3">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script>
-// iOS Safe Area Reflow Fix
-// A rotação de tela força o WebKit a recalcular env(safe-area-inset-bottom).
-// Na carga inicial e no resume do app, o compositor reutiliza cache e não recalcula.
-// Este script replica o que a rotação faz: força um reflow do .panel nos momentos críticos.
-(function() {
-  function iosReflow() {
-    var panel = document.querySelector('.panel');
-    if (!panel) return;
-    // Alterna briefly o bottom para forçar o WebKit a recalcular env()
-    panel.style.bottom = '0px';
-    // Dois frames garantem que o reflow seja commitado antes de restaurar
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        panel.style.bottom = '';
-      });
-    });
-  }
-
-  // Carga inicial — aguarda estilos estarem prontos
-  window.addEventListener('load', function() {
-    setTimeout(iosReflow, 60);
-  });
-
-  // Resume do app (sair e voltar sem matar)
-  document.addEventListener('visibilitychange', function() {
-    if (!document.hidden) setTimeout(iosReflow, 60);
-  });
-
-  // pageshow cobre o bfcache (navegação com back/forward)
-  window.addEventListener('pageshow', function(e) {
-    if (e.persisted) iosReflow();
-  });
-
-  // focus cobre casos onde visibilitychange não dispara (alguns iOS edge cases)
-  window.addEventListener('focus', function() {
-    setTimeout(iosReflow, 60);
-  });
-})();
-</script>
 <style>
 :root {
   --bg: #000;
@@ -67,7 +27,8 @@
 }
 @media(prefers-color-scheme:light){
   :root{--bg:#F2F2F7;--glass:rgba(255,255,255,0.75);--border:rgba(0,0,0,0.07);--fg:#000;--muted:#636366;}
-  html { background: #F2F2F7; } /* literal — painted layer da safe area no light mode */
+  /* html background no light mode: cor sólida cobre zona do home indicator */
+  html { background: #F2F2F7; }
 }
 *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',-apple-system,sans-serif;-webkit-tap-highlight-color:transparent;}
 /* ═══════════════════════════════════════════════════
@@ -76,11 +37,15 @@
    ═══════════════════════════════════════════════════ */
 
 html {
-  /* height real da tela no iOS — inclui zona do home indicator */
   height: -webkit-fill-available;
-  /* cor sólida literal para o painted layer do WebKit (home indicator zone) */
-  background: #000000;
   overflow: hidden;
+  /* O mesmo gradiente do .bg cobre a zona do home indicator.
+     Assim não há barra preta: a zona inferior mostra o fundo do app,
+     sem depender de env(safe-area-inset-bottom) que o WebKit cacheia incorretamente. */
+  background:
+    radial-gradient(circle at 20% 20%, rgba(10,132,255,.18), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(94,92,230,.18),  transparent 50%),
+    #000000;
 }
 
 body {
@@ -111,12 +76,12 @@ body {
 .panel {
   position: fixed;
   top: 0; left: 0; right: 0;
-  /* Estende-se além da safe area para cobrir a curva/home indicator */
-  bottom: calc(-1 * env(safe-area-inset-bottom, 34px));
+  /* bottom:0 — sem env() frágil. A zona do home indicator é coberta
+     visualmente pelo gradiente do html, não pela extensão do painel. */
+  bottom: 0;
 
   z-index: 1;
 
-  /* var(--glass) adapta automaticamente: dark=rgba(255,255,255,.04) light=rgba(255,255,255,.75) */
   background: var(--glass);
   backdrop-filter: blur(60px);
   -webkit-backdrop-filter: blur(60px);
@@ -129,9 +94,9 @@ body {
   flex-direction: column;
   align-items: center;
 
-  /* padding-bottom inclui safe area + espaço confortável — conteúdo nunca fica sob o home indicator */
   padding-top:    max(44px, env(safe-area-inset-top, 44px));
-  padding-bottom: calc(env(safe-area-inset-bottom, 34px) + 28px);
+  /* padding-bottom: valor generoso garante conteúdo acima do home indicator */
+  padding-bottom: max(34px, env(safe-area-inset-bottom, 34px));
   padding-left:   max(16px, env(safe-area-inset-left,  16px));
   padding-right:  max(16px, env(safe-area-inset-right, 16px));
 }
