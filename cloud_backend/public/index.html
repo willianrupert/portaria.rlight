@@ -34,10 +34,21 @@
 
   function restoreFromCache() {
     var cached = parseFloat(localStorage.getItem(KEY));
-    applyBottom(isNaN(cached) ? 34 : cached);
+    // Ignore cached values <=0 (stale WebKit env() value)
+    if (isNaN(cached) || cached <= 0) {
+      applyBottom(34); // Default for Face ID iPhones
+    } else {
+      applyBottom(cached);
+    }
   }
 
-  document.addEventListener('DOMContentLoaded', restoreFromCache);
+  document.addEventListener('DOMContentLoaded', function() {
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        restoreFromCache();
+      });
+    });
+  });
 
   window.addEventListener('resize', function() {
     var h = measureEnv();
