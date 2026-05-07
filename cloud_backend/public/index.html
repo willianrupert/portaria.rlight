@@ -74,7 +74,8 @@ body {
   position: fixed;
   top: 0; left: 0; right: 0;
   /* Fix: extend panel 50px beyond viewport to cover home indicator area */
-  bottom: -50px;
+  height: calc(100vh + 50px);
+  min-height: calc(100vh + 50px);
   z-index: 1;
   background: var(--glass);
   backdrop-filter: blur(60px);
