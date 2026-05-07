@@ -14,6 +14,46 @@
 <title>RLight — Portaria Digital</title>
 <link rel="icon" type="image/png" href="/favicon.png?v=3">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+// iOS Safe Area Reflow Fix
+// A rotação de tela força o WebKit a recalcular env(safe-area-inset-bottom).
+// Na carga inicial e no resume do app, o compositor reutiliza cache e não recalcula.
+// Este script replica o que a rotação faz: força um reflow do .panel nos momentos críticos.
+(function() {
+  function iosReflow() {
+    var panel = document.querySelector('.panel');
+    if (!panel) return;
+    // Alterna briefly o bottom para forçar o WebKit a recalcular env()
+    panel.style.bottom = '0px';
+    // Dois frames garantem que o reflow seja commitado antes de restaurar
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        panel.style.bottom = '';
+      });
+    });
+  }
+
+  // Carga inicial — aguarda estilos estarem prontos
+  window.addEventListener('load', function() {
+    setTimeout(iosReflow, 60);
+  });
+
+  // Resume do app (sair e voltar sem matar)
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) setTimeout(iosReflow, 60);
+  });
+
+  // pageshow cobre o bfcache (navegação com back/forward)
+  window.addEventListener('pageshow', function(e) {
+    if (e.persisted) iosReflow();
+  });
+
+  // focus cobre casos onde visibilitychange não dispara (alguns iOS edge cases)
+  window.addEventListener('focus', function() {
+    setTimeout(iosReflow, 60);
+  });
+})();
+</script>
 <style>
 :root {
   --bg: #000;
