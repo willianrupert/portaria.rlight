@@ -72,11 +72,10 @@ body {
 /* ── PAINEL PRINCIPAL (mobile < 601px) ──────────────── */
 .panel {
   position: fixed;
-  /* Tentativa 17: usar 100dvh para cobrir viewport dinâmico incluindo safe areas */
+  /* Tentativa 15: usar height explícito em vez de top/bottom para cobrir viewport */
   top: 0;
   left: 0;
   right: 0;
-  height: 100dvh;
   height: 100vh;
   height: -webkit-fill-available;
   z-index: 1;
