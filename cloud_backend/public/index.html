@@ -15,58 +15,9 @@
 <link rel="icon" type="image/png" href="/favicon.png?v=3">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script>
+// iOS PWA black bar fix: panel uses height extension instead of bottom manipulation
 (function() {
-  var KEY = 'rlight-sab'; // safe-area-bottom cached value
-
-  function applyBottom(px) {
-    var panel = document.querySelector('.panel');
-    if (panel) panel.style.bottom = '-' + Math.max(0, px) + 'px';
-    document.documentElement.style.setProperty('--sab', px + 'px');
-  }
-
-  // Define CSS variable immediately before DOM is ready
-  var cached = parseFloat(localStorage.getItem(KEY));
-  var sab = (isNaN(cached) || cached <= 0) ? 34 : cached;
-  document.documentElement.style.setProperty('--sab', sab + 'px');
-
-  function measureEnv() {
-    var probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed;bottom:0;left:0;width:1px;height:env(safe-area-inset-bottom,0px);pointer-events:none;opacity:0;';
-    document.documentElement.appendChild(probe);
-    var h = probe.getBoundingClientRect().height;
-    document.documentElement.removeChild(probe);
-    return h;
-  }
-
-  function restoreFromCache() {
-    var cached = parseFloat(localStorage.getItem(KEY));
-    // Ignore cached values <=0 (stale WebKit env() value)
-    if (isNaN(cached) || cached <= 0) {
-      applyBottom(34); // Default for Face ID iPhones
-    } else {
-      applyBottom(cached);
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        restoreFromCache();
-      });
-    });
-  });
-
-  window.addEventListener('resize', function() {
-    var h = measureEnv();
-    if (h > 0) {
-      localStorage.setItem(KEY, String(h));
-      applyBottom(h);
-    }
-  });
-
-  document.addEventListener('visibilitychange', function() {
-    if (!document.hidden) restoreFromCache();
-  });
+  // Keep any other initialization code here if needed
 })();
 </script>
 <style>
@@ -122,7 +73,9 @@ body {
 .panel {
   position: fixed;
   top: 0; left: 0; right: 0;
-  bottom: calc(-1 * var(--sab, 34px)); /* CSS variable with fallback */
+  /* Fix: extend panel height to cover home indicator area */
+  height: calc(100vh + 50px);
+  height: calc(-webkit-fill-available + 50px);
   z-index: 1;
   background: var(--glass);
   backdrop-filter: blur(60px);
