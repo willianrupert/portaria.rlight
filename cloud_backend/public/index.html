@@ -36,29 +36,21 @@
    ═══════════════════════════════════════════════════ */
 
 html {
-  /* Ocupa absolutamente tudo — incluindo status bar e curva inferior */
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-
-  /* Background no html, não no body — cobre a zona do home indicator */
-  /* Valor literal (não var(--bg)) — resolvido antes do compositor do WebKit */
+  /* height real da tela no iOS — inclui zona do home indicator */
+  height: -webkit-fill-available;
+  /* cor sólida literal para o painted layer do WebKit (home indicator zone) */
   background: #000000;
+  overflow: hidden;
 }
 
 body {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  margin: 0; padding: 0;
   overflow: hidden;
   color: var(--fg);
   background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
 }
 
 /* Background animado — cobre absolutamente tudo, incluindo safe areas */
@@ -78,14 +70,14 @@ body {
    ──────────────────────────────────────────────────── */
 .panel {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0; /* ← Até a borda física, sem negativo */
+  top: 0; left: 0; right: 0;
+  /* Estende-se além da safe area para cobrir a curva/home indicator */
+  bottom: calc(-1 * env(safe-area-inset-bottom, 34px));
 
   z-index: 1;
 
-  background: rgba(0, 0, 0, 0.55);
+  /* var(--glass) adapta automaticamente: dark=rgba(255,255,255,.04) light=rgba(255,255,255,.75) */
+  background: var(--glass);
   backdrop-filter: blur(60px);
   -webkit-backdrop-filter: blur(60px);
 
@@ -97,8 +89,9 @@ body {
   flex-direction: column;
   align-items: center;
 
+  /* padding-bottom inclui safe area + espaço confortável — conteúdo nunca fica sob o home indicator */
   padding-top:    max(44px, env(safe-area-inset-top, 44px));
-  padding-bottom: max(34px, env(safe-area-inset-bottom, 34px));
+  padding-bottom: calc(env(safe-area-inset-bottom, 34px) + 28px);
   padding-left:   max(16px, env(safe-area-inset-left,  16px));
   padding-right:  max(16px, env(safe-area-inset-right, 16px));
 }
@@ -106,28 +99,16 @@ body {
 
 /* ── DESKTOP (≥ 601px) ────────────────────────────── */
 @media (min-width: 601px) {
-  html {
-    position: static;
-    height: auto;
-    background: var(--bg);
-  }
-  body {
-    min-height: 100vh;
-    background: var(--bg);
-  }
-  .bg {
-    bottom: 0;
-  }
+  html { height: auto; overflow: auto; }
+  body { min-height: 100vh; background: var(--bg); }
+  .bg  { bottom: 0; }
   .panel {
     position: relative;
-    top: auto; left: auto; right: auto; bottom: auto;
-    width: 94%;
-    max-width: 430px;
-    height: 88vh;
-    margin: auto;
+    bottom: auto;
+    width: 94%; max-width: 430px;
+    height: 88vh; margin: auto;
     border: 1px solid var(--border);
-    border-radius: 44px;
-    padding: 36px 28px;
+    border-radius: 44px; padding: 36px 28px;
     overflow-y: auto;
   }
 }
