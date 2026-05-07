@@ -3,7 +3,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="rlight">
@@ -72,10 +72,11 @@ body {
 /* ── PAINEL PRINCIPAL (mobile < 601px) ──────────────── */
 .panel {
   position: fixed;
-  /* Tentativa 15: usar height explícito em vez de top/bottom para cobrir viewport */
+  /* Tentativa 17: usar 100dvh para cobrir viewport dinâmico incluindo safe areas */
   top: 0;
   left: 0;
   right: 0;
+  height: 100dvh;
   height: 100vh;
   height: -webkit-fill-available;
   z-index: 1;
