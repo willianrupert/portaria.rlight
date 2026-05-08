@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rlight UI - Preview All Screens (600×1024)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .preview-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .preview-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .preview-header p {
+            font-size: 14px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .info-box {
+            background: rgba(10,132,255,0.1);
+            border: 1px solid rgba(10,132,255,0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .info-box p {
+            font-size: 13px;
+            color: rgba(255,255,255,0.8);
+            line-height: 1.4;
+        }
+
+        .info-box strong {
+            color: #0A84FF;
+        }
+
+        .info-box ul {
+            margin: 8px 0 0 20px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .info-box li {
+            margin-top: 4px;
+        }
+
+        .note {
+            background: rgba(255,159,10,0.15);
+            border: 1px solid rgba(255,159,10,0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 16px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
+        }
+
+        .note p {
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.4;
+        }
+
+        .note strong {
+            color: #FFD60A;
+        }
+
+        .screens-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .screen-wrapper {
+            background: #000;
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.1);
+        }
+
+        .screen-label {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 1px;
+        }
+
+        .device-screen {
+            width: 400px;
+            height: 683px; /* 600x1024 scaled to 400px width */
+            background: #080810;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .device-screen iframe {
+            width: 600px;
+            height: 1024px;
+            border: none;
+            transform: scale(0.667);
+            transform-origin: top left;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .control-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .control-btn:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .scale-info {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+            backdrop-filter: blur(10px);
+        }
+
+        .scale-info strong {
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-header">
+        <h1>🖥️ rlight UI - Preview All Screens</h1>
+        <p>Visualização de todas as telas da tela 7" (600×1024) - Orange Pi</p>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" onclick="reloadAll()">🔄 Recarregar Tudo</button>
+        <button class="control-btn" onclick="toggleScale()">📐 Alternar Escala</button>
+    </div>
+
+    <div class="screens-container">
+        <div class="screen-wrapper">
+            <div class="device-screen">
+                <iframe src="index.html"></iframe>
+            </div>
+            <div class="screen-label">1. IDLE (Padrão)</div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <p><strong>📋 Como usar este preview:</strong></p>
+        <ul>
+            <li>Edite o <code>index.html</code> ou <code>style.css</code></li>
+            <li>Clique em "Recarregar Tudo" para ver as alterações</li>
+            <li>Resolução exata do Orange Pi: <strong>600×1024px (vertical)</strong></li>
+            <li>Use "Alternar Escala" se as telas não couberem no seu monitor</li>
+        </ul>
+    </div>
+
+    <div class="note">
+        <p><strong>⚠️ Tela não é touch:</strong> Controlada por botão físico (30mm inox), sensores mmWave e leitor QR GM861S.</p>
+    </div>
+
+    <div class="scale-info">
+        Resolução nativa: <strong>600 × 1024px</strong><br>
+        Tela de 7" @ 60Hz (Orange Pi)<br>
+        <span style="font-size:10px;color:rgba(255,255,255,0.4);">Kiosk mode • Non-touch • Vertical</span>
+    </div>
+
+    <script>
+        let isScaled = false;
+
+        function reloadAll() {
+            const frames = document.querySelectorAll('iframe');
+            frames.forEach(frame => {
+                frame.src = frame.src;
+            });
+        }
+
+        function toggleScale() {
+            const screens = document.querySelectorAll('.device-screen');
+            
+            if (!isScaled) {
+                const scale = 0.5;
+                screens.forEach(screen => {
+                    const iframe = screen.querySelector('iframe');
+                    iframe.style.transform = `scale(${scale})`;
+                    iframe.style.transformOrigin = 'top left';
+                    screen.style.width = (600 * scale) + 'px';
+                    screen.style.height = (1024 * scale) + 'px';
+                });
+                document.querySelectorAll('.screen-wrapper').forEach(w => {
+                    w.style.display = 'inline-block';
+                });
+                isScaled = true;
+            } else {
+                screens.forEach(screen => {
+                    const iframe = screen.querySelector('iframe');
+                    iframe.style.transform = 'scale(0.667)';
+                    iframe.style.transformOrigin = 'top left';
+                    screen.style.width = '400px';
+                    screen.style.height = '683px';
+                });
+                document.querySelectorAll('.screen-wrapper').forEach(w => {
+                    w.style.display = '';
+                });
+                isScaled = false;
+            }
+        }
+    </script>
+</body>
+</html>
