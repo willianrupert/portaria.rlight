@@ -72,19 +72,25 @@ body {
 /* ── PAINEL PRINCIPAL (mobile < 601px) ──────────────── */
 .panel {
   position: fixed;
-  /* Tentativa 15: usar height explícito em vez de top/bottom para cobrir viewport */
+  /* Tentativa 19: panel cobre toda a tela com fundo sólido */
   top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
-  height: 100vh;
-  height: -webkit-fill-available;
   z-index: 1;
-  background: var(--glass);
-  backdrop-filter: blur(60px);
-  -webkit-backdrop-filter: blur(60px);
+  background: var(--bg); /* Fundo sólido opaco */
+  overflow: hidden; /* O panel-content cuida do scroll */
+}
+
+.panel-content {
+  width: 100%;
+  height: 100%;
   overflow-y: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  background: var(--glass);
+  backdrop-filter: blur(60px);
+  -webkit-backdrop-filter: blur(60px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -93,7 +99,7 @@ body {
   padding-left: max(16px, env(safe-area-inset-left, 16px));
   padding-right: max(16px, env(safe-area-inset-right, 16px));
 }
-.panel::-webkit-scrollbar { display: none; }
+.panel-content::-webkit-scrollbar { display: none; }
 
 /* ── DESKTOP (≥ 601px) ────────────────────────────── */
 @media (min-width: 601px) {
@@ -244,10 +250,11 @@ input[type=range]::-moz-range-thumb{
 </head>
 <body>
 <div class="bg"></div>
-<div class="panel">
+  <div class="panel">
+    <div class="panel-content">
 
-  <!-- LOADING -->
-  <div id="view-loading" class="view active">
+    <!-- LOADING -->
+    <div id="view-loading" class="view active">
     <div class="spin"></div>
     <p style="color:var(--muted);font-size:14px;">Verificando sessão...</p>
   </div>
