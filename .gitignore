@@ -1,3 +1,6 @@
 
 .pio/
 .vscode/
+.DS_Store
+host/.DS_Store
+host/ui/.DS_Store
