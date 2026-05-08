@@ -1,433 +1,1163 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=600, height=1024, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>rlight UI - Kiosk Vertical</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1024, height=600, initial-scale=1, user-scalable=no">
+<title>rlight — Portaria Autônoma v7.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;300;400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+:root{
+  --bg:#07070f;
+  --glass:rgba(255,255,255,0.042);
+  --glass-hover:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.082);
+  --border-strong:rgba(255,255,255,0.15);
+
+  --green:#30D158;
+  --yellow:#FFD60A;
+  --blue:#0A84FF;
+  --red:#FF453A;
+  --orange:#FF9F0A;
+  --purple:#BF5AF2;
+  --cyan:#64D2FF;
+
+  --t1:rgba(255,255,255,0.92);
+  --t2:rgba(255,255,255,0.55);
+  --t3:rgba(255,255,255,0.28);
+  --t4:rgba(255,255,255,0.12);
+
+  --f1:'DM Sans',sans-serif;
+  --f2:'DM Mono',monospace;
+
+  --W:1024px;
+  --H:600px;
+}
+
+html,body{
+  width:var(--W);height:var(--H);
+  overflow:hidden;background:var(--bg);
+  font-family:var(--f1);color:var(--t1);
+  user-select:none;
+}
+
+/* ═══════════════════════ BACKGROUND ═══════════════════════ */
+#bg{position:fixed;inset:0;z-index:0;overflow:hidden}
+.blob{position:absolute;border-radius:50%;filter:blur(100px);opacity:0.18;transition:background 1.4s ease}
+#b1{width:480px;height:480px;bottom:-80px;left:-80px;background:var(--green);animation:float1 10s ease-in-out infinite alternate}
+#b2{width:400px;height:400px;top:-60px;right:-60px;background:var(--blue);animation:float2 14s ease-in-out infinite alternate}
+.noise{position:absolute;inset:0;opacity:0.03;pointer-events:none}
+.glass-layer{position:absolute;inset:0;backdrop-filter:blur(40px) saturate(1.8);background:rgba(7,7,15,0.58)}
+
+@keyframes float1{0%{transform:translate(0,0) scale(1)}100%{transform:translate(40px,-30px) scale(1.08)}}
+@keyframes float2{0%{transform:translate(0,0) scale(1)}100%{transform:translate(-35px,25px) scale(0.94)}}
+
+/* ═══════════════════════ HUD ═══════════════════════ */
+#hud{
+  position:fixed;top:0;left:0;right:0;height:52px;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;
+  backdrop-filter:blur(20px) saturate(1.6);
+  background:rgba(7,7,15,0.5);
+  border-bottom:1px solid var(--border);
+  transition:opacity 0.5s;
+}
+#hud.hide{opacity:0;pointer-events:none}
+.logo{font-size:11px;font-weight:600;letter-spacing:3.5px;color:var(--t3);text-transform:uppercase}
+.state-lbl{font-size:11px;font-weight:500;letter-spacing:1.8px;color:var(--t3);text-transform:uppercase}
+.hud-r{display:flex;align-items:center;gap:14px}
+.online-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse-dot 2s ease-in-out infinite;transition:background 0.5s,box-shadow 0.5s}
+.online-dot.offline{background:var(--red);box-shadow:0 0 8px var(--red);animation:none}
+.online-dot.degraded{background:var(--orange);box-shadow:0 0 8px var(--orange)}
+.clock-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.clock{font-size:22px;font-weight:200;letter-spacing:-0.5px;line-height:1}
+.clock .hm{color:var(--t1)}
+.clock .sec{font-size:15px;color:var(--t2);transition:opacity 0.5s}
+.clock .sep{animation:blink 1s step-end infinite}
+.date-str{font-size:10px;font-weight:500;letter-spacing:1px;color:var(--t3);text-transform:uppercase}
+
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(1.25)}}
+
+/* ═══════════════════════ SCREENS ═══════════════════════ */
+#app{position:fixed;inset:0;top:52px;z-index:10}
+.screen{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px 48px;
+  opacity:0;pointer-events:none;
+  transition:opacity 0.35s ease;
+}
+.screen.active{opacity:1;pointer-events:all}
+
+/* ═══════════════════════ SCREEN NAV (demo) ═══════════════════════ */
+#nav{
+  position:fixed;bottom:0;left:0;right:0;height:44px;z-index:200;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  background:rgba(7,7,15,0.85);backdrop-filter:blur(16px);
+  border-top:1px solid var(--border);padding:0 12px;overflow-x:auto;
+}
+.nav-btn{
+  padding:6px 10px;font-size:10px;font-weight:500;letter-spacing:0.8px;
+  border:1px solid var(--border);border-radius:6px;
+  background:transparent;color:var(--t2);cursor:pointer;
+  white-space:nowrap;transition:all 0.2s;text-transform:uppercase;
+}
+.nav-btn:hover{background:var(--glass);color:var(--t1);border-color:var(--border-strong)}
+.nav-btn.active{background:rgba(255,255,255,0.08);color:var(--t1);border-color:var(--border-strong)}
+
+/* ═══════════════════════ COMPONENTS ═══════════════════════ */
+.glass-card{
+  background:rgba(255,255,255,0.045);
+  border:1px solid var(--border);
+  border-radius:18px;
+  backdrop-filter:blur(16px);
+  padding:20px 24px;
+}
+.glass-card.success{background:rgba(48,209,88,0.06);border-color:rgba(48,209,88,0.22)}
+.glass-card.warning{background:rgba(255,159,10,0.07);border-color:rgba(255,159,10,0.22)}
+.glass-card.error{background:rgba(255,69,58,0.06);border-color:rgba(255,69,58,0.22)}
+.glass-card.purple{background:rgba(191,90,242,0.07);border-color:rgba(191,90,242,0.22)}
+.glass-card.blue{background:rgba(10,132,255,0.06);border-color:rgba(10,132,255,0.22)}
+
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 14px;border-radius:20px;
+  font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;
+  border:1px solid;
+}
+.pill.green{color:var(--green);border-color:rgba(48,209,88,0.35);background:rgba(48,209,88,0.1)}
+.pill.yellow{color:var(--yellow);border-color:rgba(255,214,10,0.35);background:rgba(255,214,10,0.1)}
+.pill.blue{color:var(--blue);border-color:rgba(10,132,255,0.35);background:rgba(10,132,255,0.1)}
+.pill.red{color:var(--red);border-color:rgba(255,69,58,0.35);background:rgba(255,69,58,0.1)}
+.pill.orange{color:var(--orange);border-color:rgba(255,159,10,0.35);background:rgba(255,159,10,0.1)}
+.pill.purple{color:var(--purple);border-color:rgba(191,90,242,0.35);background:rgba(191,90,242,0.1)}
+
+/* Progress bars */
+.prog-track{width:100%;height:2px;border-radius:1px;background:rgba(255,255,255,0.06);overflow:hidden}
+.prog-bar{height:100%;border-radius:1px;transition:width 1s linear}
+.prog-bar.green{background:var(--green)}
+.prog-bar.yellow{background:var(--yellow)}
+.prog-bar.blue{background:var(--blue)}
+.prog-bar.orange{background:var(--orange)}
+
+/* Progress footer */
+.prog-footer{
+  position:absolute;bottom:0;left:0;right:0;
+  padding:12px 48px 16px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.prog-footer .label{font-size:11px;font-weight:500;letter-spacing:0.5px;color:var(--t3);text-align:center}
+
+/* Arrows */
+.arrow-svg{width:64px;height:64px}
+.arrow-right{animation:pulse-r 1.1s ease-in-out infinite alternate}
+.arrow-left{animation:pulse-l 1.1s ease-in-out infinite alternate}
+.arrow-down{animation:pulse-d 1.1s ease-in-out infinite alternate}
+.arrow-diag{animation:pulse-diag 1.2s ease-in-out infinite alternate;transform-origin:center}
+
+@keyframes pulse-r{0%{transform:translateX(0)}100%{transform:translateX(10px)}}
+@keyframes pulse-l{0%{transform:translateX(0)}100%{transform:translateX(-10px)}}
+@keyframes pulse-d{0%{transform:translateY(0)}100%{transform:translateY(10px)}}
+@keyframes pulse-diag{0%{transform:translate(0,0)}100%{transform:translate(-7px,7px)}}
+
+@keyframes pop-in{
+  0%{transform:scale(0.3);opacity:0}
+  65%{transform:scale(1.06);opacity:1}
+  100%{transform:scale(1);opacity:1}
+}
+@keyframes float-bob{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-6px)}
+}
+@keyframes ring-pulse{
+  0%,100%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.08);opacity:0.6}
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{
+  0%{background-position:-400px center}
+  100%{background-position:400px center}
+}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-8px)}
+  40%{transform:translateX(8px)}
+  60%{transform:translateX(-5px)}
+  80%{transform:translateX(5px)}
+}
+@keyframes count-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes step-in{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slide-up{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fade-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* Spinner */
+.ios-spinner{
+  width:38px;height:38px;border-radius:50%;
+  border:3px solid rgba(255,255,255,0.12);
+  border-top-color:var(--t1);
+  animation:spin 0.85s linear infinite;
+}
+
+/* ═══════════════════════ 1 — IDLE ═══════════════════════ */
+#s-IDLE .idle-wrap{display:flex;flex-direction:column;align-items:center;gap:18px}
+#s-IDLE .idle-logo{
+  font-size:80px;font-weight:200;letter-spacing:-3px;
+  color:rgba(255,255,255,0.10);line-height:1;
+}
+#s-IDLE .idle-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--green);opacity:0.65;
+  animation:pulse-dot 3s ease-in-out infinite;
+}
+#s-IDLE .clock-idle{
+  position:absolute;top:16px;right:20px;opacity:0.38;
+  display:flex;flex-direction:column;align-items:flex-end;gap:2px;
+}
+#s-IDLE .clock-idle .ck{font-size:24px;font-weight:200;color:var(--t1)}
+#s-IDLE .clock-idle .dt{font-size:10px;letter-spacing:1px;color:var(--t3);text-transform:uppercase}
+
+/* ═══════════════════════ 2 — AWAKE / WAITING_QR ═══════════════════════ */
+#s-AWAKE{justify-content:flex-start;padding-top:20px}
+.awake-top{width:100%;text-align:center;animation:fade-rise 0.5s ease both}
+.awake-addr{font-size:12px;font-weight:500;letter-spacing:0.5px;color:var(--t3);margin-bottom:6px}
+.awake-residents{font-size:28px;font-weight:600;color:var(--green);margin-top:4px;letter-spacing:-0.5px}
+.awake-mid{
+  text-align:center;
+  animation:fade-rise 0.5s 0.08s ease both;
+  margin:18px 0;
+}
+.awake-main-title{
+  font-size:34px;font-weight:700;letter-spacing:0.5px;color:var(--t1);line-height:1.1;
+}
+.awake-sub{font-size:16px;color:var(--t2);margin-top:8px}
+.awake-arrow-zone{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  animation:fade-rise 0.5s 0.16s ease both;
+}
+.awake-arrow-zone .lbl{font-size:12px;font-weight:600;letter-spacing:1px;color:var(--yellow);opacity:0.85;text-transform:uppercase}
+.qr-glow{
+  position:relative;display:inline-block;
+  filter:drop-shadow(0 0 24px rgba(255,214,10,0.28));
+}
+/* shimmer strip for WAITING_QR */
+.shimmer-strip{
+  position:absolute;left:0;right:0;height:3px;bottom:44px;
+  background:linear-gradient(90deg, transparent 0%, var(--yellow) 50%, transparent 100%);
+  background-size:400px 100%;
+  animation:shimmer 1.6s linear infinite;
+  opacity:0;transition:opacity 0.4s;
+}
+.shimmer-strip.active{opacity:1}
+
+/* ═══════════════════════ 4 — AUTHORIZED ═══════════════════════ */
+#s-AUTHORIZED{gap:0}
+.auth-circle{
+  width:148px;height:148px;border-radius:50%;
+  background:rgba(48,209,88,0.12);
+  border:2px solid var(--green);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 60px rgba(48,209,88,0.22);
+  animation:pop-in 0.55s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.auth-check{width:64px;height:64px;color:var(--green)}
+.auth-title{
+  font-size:30px;font-weight:700;letter-spacing:1px;color:var(--green);margin-top:18px;
+  animation:fade-rise 0.4s 0.38s ease both;opacity:0;animation-fill-mode:forwards;
+}
+.auth-carrier{
+  font-size:12px;font-weight:600;letter-spacing:1.5px;color:var(--t3);margin-top:6px;text-transform:uppercase;
+  animation:fade-rise 0.4s 0.58s ease both;opacity:0;animation-fill-mode:forwards;
+}
+.auth-instruction{
+  display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:28px;
+  animation:fade-rise 0.4s 0.72s ease both;opacity:0;animation-fill-mode:forwards;
+}
+.auth-push{font-size:19px;font-weight:500;color:var(--t1)}
+.auth-sub{font-size:13px;color:var(--t2)}
+
+/* Radial timer */
+.radial-sm{position:absolute;top:20px;right:20px;width:52px;height:52px}
+.radial-sm svg{width:52px;height:52px;transform:rotate(-90deg)}
+.circ-bg{fill:none;stroke:rgba(255,255,255,0.08);stroke-width:2.5}
+.circ-fill{fill:none;stroke-width:2.5;stroke-linecap:round;transition:stroke-dashoffset 1s linear}
+.circ-fill.green{stroke:var(--green)}
+.circ-fill.blue{stroke:var(--blue)}
+
+/* ═══════════════════════ 5 — INSIDE_WAIT ═══════════════════════ */
+#s-INSIDE_WAIT{}
+.inside-icon{font-size:60px;animation:float-bob 2.2s ease-in-out infinite;line-height:1}
+.inside-title{font-size:30px;font-weight:600;color:var(--t1);margin-top:14px;text-align:center;letter-spacing:-0.3px}
+.inside-sub{font-size:15px;color:var(--t2);margin-top:6px}
+.weight-card{margin-top:20px;width:340px;text-align:center}
+.weight-lbl{font-size:11px;font-weight:600;letter-spacing:2px;color:var(--t3);text-transform:uppercase}
+.weight-val{font-size:68px;font-weight:200;color:var(--t1);line-height:1;margin-top:4px;letter-spacing:-2px}
+.weight-bar-wrap{margin-top:12px}
+
+/* ═══════════════════════ 6 — DELIVERING ═══════════════════════ */
+#s-DELIVERING{}
+.deliv-card{text-align:center;padding:24px 48px}
+.deliv-lbl{font-size:11px;font-weight:600;letter-spacing:2.5px;color:var(--green);text-transform:uppercase}
+.deliv-weight{font-size:72px;font-weight:200;color:var(--green);letter-spacing:-2px;line-height:1;margin-top:6px}
+.deliv-inst{text-align:center;margin-top:24px}
+.deliv-inst-title{font-size:28px;font-weight:600;color:var(--t1);margin-top:10px}
+.deliv-inst-sub{font-size:15px;color:var(--t2);margin-top:6px}
+.deliv-warning{display:inline-flex;align-items:center;gap:8px;margin-top:20px}
+
+/* ═══════════════════════ 7 — DOOR_REOPENED ═══════════════════════ */
+#s-DOOR_REOPENED{}
+.door-icon{font-size:72px;color:var(--t2)}
+.door-title{font-size:32px;font-weight:300;color:var(--t2);margin-top:16px}
+.door-sub{font-size:16px;color:var(--t3);margin-top:8px}
+.mmwave-pill{margin-top:28px}
+.spinner-mini{
+  position:absolute;bottom:24px;left:50%;transform:translateX(-50%);
+  width:18px;height:18px;border-radius:50%;
+  border:2px solid rgba(255,255,255,0.08);
+  border-top-color:var(--t3);
+  animation:spin 0.85s linear infinite;
+}
+
+/* ═══════════════════════ 8 — CONFIRMING ═══════════════════════ */
+#s-CONFIRMING{}
+.conf-title{font-size:20px;font-weight:400;color:var(--t1);margin-top:18px}
+.conf-sub{font-size:13px;color:var(--t2);margin-top:6px}
+.steps{margin-top:32px;display:flex;flex-direction:column;gap:14px;min-width:280px}
+.step{
+  display:flex;align-items:center;gap:12px;
+  font-size:15px;color:var(--t3);
+  transition:color 0.4s;
+  animation:step-in 0.35s ease both;
+  opacity:0;
+}
+.step.done{color:var(--t1)}
+.step-dot{
+  width:22px;height:22px;border-radius:50%;
+  border:1.5px solid var(--t4);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all 0.4s;
+  font-size:12px;color:var(--t3);
+}
+.step.done .step-dot{
+  background:var(--green);border-color:var(--green);color:#000;
+}
+
+/* ═══════════════════════ 9 — RECEIPT ═══════════════════════ */
+#s-RECEIPT{justify-content:flex-start;padding-top:16px}
+.receipt-head{text-align:center;width:100%;margin-bottom:20px}
+.receipt-head h1{font-size:26px;font-weight:600;color:var(--t1);letter-spacing:-0.3px}
+.receipt-head p{font-size:15px;color:var(--t2);margin-top:4px}
+.receipt-panels{
+  display:flex;width:100%;gap:0;
+  animation:fade-rise 0.5s ease both;
+}
+.rp-left{
+  flex:1;display:flex;flex-direction:column;align-items:center;padding:0 32px;
+  animation:fade-rise 0.5s 0s ease both;transform-origin:left;
+}
+.rp-divider{width:1px;background:var(--border);flex-shrink:0;margin:0 8px;align-self:stretch}
+.rp-right{
+  flex:1;display:flex;flex-direction:column;align-items:center;padding:0 32px;
+  animation:fade-rise 0.5s 0.1s ease both;
+}
+.receipt-photo{
+  width:100%;max-width:260px;aspect-ratio:4/3;
+  border-radius:12px;border:1px solid var(--border);
+  background:var(--glass);object-fit:cover;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--t3);font-size:12px;letter-spacing:0.5px;
+}
+.receipt-photo-placeholder{
+  width:100%;max-width:260px;height:160px;
+  border-radius:12px;border:1px solid var(--border);
+  background:var(--glass);display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:8px;color:var(--t3);
+}
+.qr-box{
+  width:160px;height:160px;border-radius:12px;
+  background:#fff;padding:10px;
+  display:flex;align-items:center;justify-content:center;
+}
+.qr-placeholder{
+  width:140px;height:140px;
+  background:repeating-conic-gradient(#222 0% 25%, #fff 0% 50%) 0 0 / 12px 12px;
+  border-radius:4px;opacity:0.4;
+}
+.receipt-meta{margin-top:12px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.receipt-url{font-size:12px;color:var(--blue);font-weight:500}
+.receipt-token{font-family:var(--f2);font-size:12px;color:var(--t3)}
+
+/* ═══════════════════════ 10 — ABORTED ═══════════════════════ */
+#s-ABORTED{}
+.aborted-icon{
+  width:64px;height:64px;border-radius:50%;
+  border:2px solid var(--t4);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--t3);font-size:28px;
+}
+.aborted-title{font-size:28px;font-weight:300;color:var(--t2);margin-top:18px}
+.aborted-sub{font-size:15px;color:var(--t3);margin-top:8px}
+
+/* ═══════════════════════ 11 — RESIDENT_P1 ═══════════════════════ */
+#s-RESIDENT_P1{}
+.res-welcome{font-size:24px;font-weight:300;color:var(--t1);letter-spacing:-0.3px}
+.res-name{font-size:64px;font-weight:700;color:var(--green);letter-spacing:-2px;line-height:1;margin-top:4px}
+.res-inst{text-align:center;margin:22px 0}
+.res-inst-txt{font-size:18px;color:var(--t1);margin-top:10px}
+.res-card{display:flex;align-items:center;gap:16px;max-width:380px}
+.res-card-icon{font-size:36px}
+.res-card-body p{font-size:15px;color:var(--t2)}
+.res-card-body small{font-size:12px;color:var(--t3);margin-top:2px;display:block}
+
+/* ═══════════════════════ 12 — RESIDENT_P2 ═══════════════════════ */
+#s-RESIDENT_P2{}
+.p2-radial-wrap{position:relative;width:130px;height:130px;margin-bottom:20px}
+.p2-radial-wrap svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.p2-lock{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:40px;
+}
+.p2-status{font-size:28px;font-weight:300;color:var(--t2)}
+.p2-sub{font-size:13px;color:var(--t3);margin-top:8px}
+
+/* ═══════════════════════ 13 — REVERSE_PICKUP ═══════════════════════ */
+#s-REVERSE_PICKUP{}
+.rev-carrier{font-size:30px;font-weight:600;color:var(--t1);margin:10px 0 18px}
+.rev-inst{text-align:center;margin-bottom:20px}
+.rev-delta{font-size:52px;font-weight:200;color:var(--purple);letter-spacing:-1.5px;margin-top:6px}
+.rev-card{min-width:280px;text-align:center}
+
+/* ═══════════════════════ 14 — DOOR_ALERT ═══════════════════════ */
+#s-DOOR_ALERT{}
+.door-ring{
+  width:180px;height:180px;border-radius:50%;
+  background:rgba(255,69,58,0.08);
+  border:2px solid var(--red);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 50px rgba(255,69,58,0.18);
+  animation:ring-pulse 1.6s ease-in-out infinite;
+  margin-bottom:16px;
+}
+.door-ring span{font-size:72px;color:var(--red)}
+.door-hero{font-size:52px;font-weight:700;letter-spacing:2px;color:var(--red);line-height:1}
+.door-subtitle{font-size:22px;color:var(--t1);margin-top:10px}
+.door-timer{font-size:32px;font-weight:200;color:var(--orange);margin-top:16px;font-variant-numeric:tabular-nums}
+.door-msg{max-width:480px;text-align:center;margin-top:auto;margin-bottom:10px}
+
+/* ═══════════════════════ 15 — MAINTENANCE ═══════════════════════ */
+#s-MAINTENANCE{}
+.maint-icon{font-size:56px;margin-bottom:10px}
+.maint-title{font-size:28px;font-weight:500;color:var(--yellow)}
+.maint-sub{font-size:15px;color:var(--t2);margin-top:6px}
+.health-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+  margin:24px 0;width:100%;max-width:440px;
+}
+.health-item{
+  background:var(--glass);border:1px solid var(--border);border-radius:12px;
+  padding:12px 16px;display:flex;align-items:center;justify-content:space-between;
+}
+.health-name{font-size:12px;font-weight:500;color:var(--t2)}
+.health-dot{width:8px;height:8px;border-radius:50%}
+.health-dot.ok{background:var(--green);box-shadow:0 0 6px var(--green)}
+.health-dot.deg{background:var(--orange);box-shadow:0 0 6px var(--orange)}
+.health-dot.off{background:var(--red)}
+.maint-score{font-size:18px;color:var(--t1);font-weight:500}
+.maint-footer{font-size:12px;color:var(--t3);text-align:center;margin-top:auto;padding-bottom:16px;max-width:400px;letter-spacing:0.3px}
+
+/* ═══════════════════════ 16 — ERROR ═══════════════════════ */
+#s-ERROR{}
+.err-hex{
+  width:120px;height:120px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;margin-bottom:16px;
+}
+.err-hex svg.hex-bg{width:120px;height:120px;position:absolute}
+.err-x{width:44px;height:44px;color:var(--red);position:relative;z-index:1}
+.err-title{font-size:28px;font-weight:600;color:var(--red)}
+.err-code{
+  font-family:var(--f2);font-size:13px;color:var(--t3);
+  background:rgba(0,0,0,0.4);border:1px solid var(--border);
+  border-radius:6px;padding:5px 12px;margin:10px 0 20px;
+}
+.err-msg{font-size:17px;color:var(--t1);text-align:center;max-width:420px;line-height:1.5}
+.err-bell{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  margin-top:auto;margin-bottom:16px;
+}
+.err-bell .lbl{font-size:12px;font-weight:600;letter-spacing:1px;color:var(--yellow);text-transform:uppercase}
+.shake{animation:shake 0.6s ease both}
+
+/* ═══════════════════════ FALLBACK POPUP ═══════════════════════ */
+#fallback-popup{
+  position:fixed;bottom:44px;left:50%;transform:translateX(-50%) translateY(100%);
+  width:360px;z-index:150;
+  background:rgba(12,12,24,0.92);
+  border:1px solid var(--border-strong);
+  border-radius:20px;
+  backdrop-filter:blur(24px);
+  padding:24px;
+  transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1),opacity 0.4s;
+  opacity:0;
+}
+#fallback-popup.show{transform:translateX(-50%) translateY(0);opacity:1}
+.fb-title{font-size:17px;color:var(--t1);font-weight:500}
+.fb-sub{font-size:13px;color:var(--t2);margin-top:4px}
+.fb-phone{display:flex;align-items:center;gap:10px;margin:16px 0}
+.fb-phone-icon{font-size:24px;color:var(--blue)}
+.fb-phone-num{font-size:28px;font-weight:600;color:var(--blue);letter-spacing:-0.5px}
+.fb-btn{
+  width:100%;padding:12px;border-radius:12px;
+  border:1.5px solid rgba(10,132,255,0.5);
+  background:rgba(10,132,255,0.1);color:var(--blue);
+  font-size:15px;font-weight:600;cursor:pointer;
+  transition:background 0.2s,border-color 0.2s;
+  font-family:var(--f1);
+}
+.fb-btn:hover{background:rgba(10,132,255,0.18);border-color:rgba(10,132,255,0.7)}
+
+/* UTILITIES */
+.tc{text-align:center}
+.abs-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+</style>
 </head>
 <body>
-    <!-- Background Animado (Camadas 1, 2, 3) -->
-    <div id="bg-layer" class="bg-layer">
-        <div class="blob blob-green" id="bg-blob-1"></div>
-        <div class="blob blob-blue" id="bg-blob-2"></div>
-        <svg class="noise-overlay" viewBox="0 0 600 1024" preserveAspectRatio="none">
-            <filter id="noiseFilter">
-                <feTurbulence type="fractalNoise" baseFrequency="0.6" stitchTiles="stitch"/>
-            </filter>
-            <rect width="100%" height="100%" filter="url(#noiseFilter)"/>
-        </svg>
-        <div class="glass-layer"></div>
+
+<!-- BACKGROUND -->
+<div id="bg">
+  <div class="blob" id="b1"></div>
+  <div class="blob" id="b2"></div>
+  <svg class="noise" viewBox="0 0 1024 600" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <filter id="nf"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" stitchTiles="stitch"/></filter>
+    <rect width="100%" height="100%" filter="url(#nf)"/>
+  </svg>
+  <div class="glass-layer"></div>
+</div>
+
+<!-- HUD -->
+<header id="hud">
+  <span class="logo">rlight</span>
+  <span class="state-lbl" id="hud-state"></span>
+  <div class="hud-r">
+    <div class="online-dot" id="online-dot"></div>
+    <div class="clock-wrap">
+      <div class="clock"><span class="hm" id="clk-hm">00:00</span><span class="sep">:</span><span class="sec" id="clk-s">00</span></div>
+      <div class="date-str" id="clk-date">SEG, 01 JAN</div>
     </div>
+  </div>
+</header>
 
-    <!-- HUD Global -->
-    <header id="global-hud">
-        <div class="hud-left" style="display: flex; align-items: center; gap: 10px;">
-            <span class="logo-text">rlight</span>
-            <div id="ui-gate-badge" class="pill orange-pill" style="display: none; padding: 4px 8px;">
-                <span class="caption orange">Portão Aberto</span>
-            </div>
-        </div>
-        <div class="hud-center">
-            <span id="ui-hud-state" class="state-label"></span>
-        </div>
-        <div class="hud-right">
-            <button id="ui-btn-settings" class="icon-btn-sm tertiary" style="display: none;">⚙</button>
-            <div id="ui-online-dot" class="status-dot"></div>
-            <div class="time-block">
-                <div class="clock"><span id="ui-clock-hm">00:00</span><span id="ui-clock-s">:00</span></div>
-                <div id="ui-date" class="date-label">SEG, 01 JAN</div>
-            </div>
-        </div>
-    </header>
+<!-- APP -->
+<div id="app">
 
-    <main id="app-container">
-        
-        <!-- 0: LOGIN (Apple Style) -->
-        <section id="screen-LOGIN" class="screen centered">
-            <div class="login-wrapper">
-                <h1 class="hero-logo mb-10">rlight</h1>
-                
-                <div class="glass-card login-card pop-in">
-                    <h2 class="body-text fw-400 secondary mb-8">Controle de Acesso de Alta Segurança</h2>
-                    
-                    <button id="btn-google-login" class="apple-auth-button">
-                        <div class="auth-icon-wrapper">
-                            <svg viewBox="0 0 24 24" width="20" height="20">
-                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                            </svg>
-                        </div>
-                        <span class="auth-text">Continuar com Google</span>
-                    </button>
-                    
-                    <p class="caption tertiary mt-8">Ao entrar, você concorda com os termos de segurança da rlight</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- 1: IDLE -->
-        <section id="screen-IDLE" class="screen">
-            <div class="idle-content">
-                <h1 class="hero-logo">rlight</h1>
-                <div class="pulse-dot"></div>
-            </div>
-        </section>
-
-        <!-- 2 & 3: AWAKE & WAITING_QR -->
-        <section id="screen-AWAKE" class="screen">
-            <div class="split-layout">
-                <div class="top-third">
-                    <p id="ui-endereco" class="address-text">Rua Hermes da Fonseca, 315 — CEP 54400-333</p>
-                    <p class="body-text mt-4">Recebedores autorizados:</p>
-                    <h2 id="ui-recebedores" class="resident-names">Willian Rupert · Maria Aparecida</h2>
-                </div>
-                
-                <div class="mid-third text-center">
-                    <h1 class="main-title">LEIA O CÓDIGO DO PACOTE</h1>
-                    <p class="body-text secondary">Aproxime a etiqueta de rastreio abaixo</p>
-                </div>
-
-                <div class="bottom-third">
-                    <div id="qr-arrow-group" class="action-arrow-group">
-                        <svg class="arrow-icon pulse-arrow-diag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="13 17 18 12 13 7"></polyline>
-                            <polyline points="6 17 11 12 6 7"></polyline>
-                        </svg>
-                        <span class="caption yellow">Leitor aqui</span>
-                    </div>
-                </div>
-            </div>
-            <!-- Timer fixo no bottom part de AWAKE/WAITING_QR -->
-            <div class="progress-footer">
-                <span id="ui-awake-timer-text" class="caption secondary mb-2 text-center">Aguardando leitura · 30s</span>
-                <div class="progress-track">
-                    <div id="ui-awake-progress" class="progress-bar yellow" style="width: 100%"></div>
-                </div>
-            </div>
-            
-            <!-- Shimmer strip for WAITING_QR -->
-            <div id="shimmer-scanner" class="shimmer-strip"></div>
-        </section>
-
-        <!-- 4: AUTHORIZED -->
-        <section id="screen-AUTHORIZED" class="screen centered">
-            <div class="success-circle pop-in">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            </div>
-            <h1 class="success-title mt-4 fade-in-delay-1">ACESSO LIBERADO</h1>
-            <p id="ui-authorized-carrier" class="caption tertiary fade-in-delay-2 mb-8"></p>
-            
-            <div class="instruction-group mt-10">
-                <svg class="arrow-icon pulse-right white-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                <h2 class="body-text font-500 mt-4">Empurre a porta</h2>
-                <p class="caption secondary">A fechadura está desbloqueada</p>
-            </div>
-
-            <!-- Absolute positioned radial timer -->
-            <div class="radial-timer top-right">
-                <svg viewBox="0 0 36 36"><path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /><path id="auth-radial" class="circle-fill green" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /></svg>
-            </div>
-        </section>
-
-        <!-- 5: INSIDE_WAIT -->
-        <section id="screen-INSIDE_WAIT" class="screen centered">
-            <div class="bounce-box mt-4">📦</div>
-            <h1 class="main-title mt-4">Coloque o pacote na balança</h1>
-            <p class="body-text secondary">Qualquer posição da plataforma</p>
-            
-            <div class="glass-card mt-10">
-                <span class="caption tertiary">PESO DETECTADO</span>
-                <div class="weight-display"><span id="ui-inside-weight">—</span></div>
-                <div class="progress-track mt-4"><div id="ui-inside-weight-bar" class="progress-bar green" style="width: 0%"></div></div>
-            </div>
-
-            <div class="progress-footer mt-auto">
-                <span class="caption tertiary mb-2 text-center">Tempo restante para depósito</span>
-                <div class="progress-track">
-                    <div id="ui-inside-timer-bar" class="progress-bar orange" style="width: 100%"></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 6: DELIVERING -->
-        <section id="screen-DELIVERING" class="screen centered">
-            <div class="glass-card success-card mt-4">
-                <span class="caption green spaced">PACOTE REGISTRADO</span>
-                <div class="weight-display mt-2"><span id="ui-delivering-weight">0.0 kg</span></div>
-            </div>
-            
-            <div class="instruction-group mt-12 mb-8">
-                <svg class="arrow-icon pulse-left yellow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                <h2 class="main-title mt-4">Saia e feche a porta</h2>
-                <p class="body-text secondary">O recibo será gerado automaticamente</p>
-            </div>
-            
-            <div class="pill orange-pill">
-                <span class="caption orange">⚠ Não feche antes de sair do corredor</span>
-            </div>
-        </section>
-
-        <!-- 7: DOOR_REOPENED -->
-        <section id="screen-DOOR_REOPENED" class="screen centered">
-            <div class="icon-xl secondary-color mb-4">🚪</div>
-            <h1 class="title fw-400 secondary-color">Aguardando saída...</h1>
-            <p class="body-text tertiary-color">Feche a porta completamente</p>
-            
-            <div id="ui-mmwave-indicator" class="pill orange-pill mt-8">
-                <span class="caption orange">● Presença detectada</span>
-            </div>
-        </section>
-
-        <!-- 8: CONFIRMING -->
-        <section id="screen-CONFIRMING" class="screen centered">
-            <div class="ios-spinner mb-6"></div>
-            <h1 class="body-text fw-400 text-primary">Gerando comprovante</h1>
-            <p class="caption secondary mt-2">Registrando peso e assinatura criptográfica</p>
-            
-            <div class="steps-group mt-12 text-left">
-                <div class="step-item" id="step-1"><span class="step-icon">○</span> <span class="step-text">Estabilizando balança...</span></div>
-                <div class="step-item mt-4" id="step-2"><span class="step-icon">○</span> <span class="step-text">Capturando imagem...</span></div>
-                <div class="step-item mt-4" id="step-3"><span class="step-icon">○</span> <span class="step-text">Assinando token...</span></div>
-            </div>
-        </section>
-
-        <!-- 9: RECEIPT (Vertical Stack Layout) -->
-        <section id="screen-RECEIPT" class="screen">
-            <div class="receipt-header text-center mt-8">
-                <h1 class="main-title">Entrega registrada</h1>
-                <p class="body-text secondary mt-2">Fotografe o código abaixo para o seu comprovante</p>
-            </div>
-
-            <div class="receipt-stack mt-8">
-                <div class="receipt-panel photo-panel">
-                    <img id="ui-photo" src="" alt="Snapshot" class="preview-img hidden">
-                    <div class="photo-info mt-4">
-                        <div id="ui-carrier-pill" class="pill mb-2"><span class="caption">via DESCONHECIDA</span></div>
-                        <p id="ui-receipt-weight" class="body-text secondary">0.0 kg</p>
-                        <p id="ui-receipt-time" class="caption tertiary mt-1"></p>
-                    </div>
-                </div>
-
-                <div class="receipt-separator"></div>
-
-                <div class="receipt-panel qr-panel">
-                    <div id="ui-qrcode-container" class="qr-box"></div>
-                    <p class="caption tertiary spaced mt-4 text-center">COMPROVANTE DIGITAL</p>
-                    <p class="caption blue mt-1 text-center">portaria.rlight.com.br</p>
-                    <p id="ui-receipt-token" class="mono-text tertiary mt-1 text-center"></p>
-                </div>
-            </div>
-
-            <div class="progress-footer mt-auto">
-                <span class="caption tertiary mb-2 text-center">Esta tela fecha automaticamente</span>
-                <div class="progress-track"><div id="ui-receipt-timer-bar" class="progress-bar blue" style="width: 100%"></div></div>
-            </div>
-        </section>
-
-        <!-- 10: ABORTED -->
-        <section id="screen-ABORTED" class="screen centered">
-            <div class="icon-xl tertiary-color mb-4">○</div>
-            <h1 class="title fw-400 secondary-color">Nenhum pacote registrado</h1>
-            <p class="body-text tertiary-color">O ciclo foi encerrado sem depósito</p>
-        </section>
-
-        <!-- 11: RESIDENT_P1 -->
-        <section id="screen-RESIDENT_P1" class="screen centered">
-            <h1 class="title fw-300">Bem-vindo</h1>
-            <h2 id="ui-resident-name" class="hero-text green mt-2">Willian</h2>
-            
-            <div class="instruction-group mt-12 mb-8">
-                <svg class="arrow-icon pulse-right white-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                <h2 class="body-text mt-4">Entre e deixe a porta fechar</h2>
-            </div>
-            
-            <div class="glass-card mt-8 flex-row align-center">
-                <span class="icon-lg mr-4">🔓</span>
-                <div class="text-left">
-                    <p class="body-text secondary">A porta interna abrirá automaticamente</p>
-                    <p class="caption tertiary mt-1">Aguarde dentro do corredor</p>
-                </div>
-            </div>
-
-            <div class="radial-timer top-right">
-                <svg viewBox="0 0 36 36"><path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /><path id="res-p1-radial" class="circle-fill green" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" /></svg>
-            </div>
-        </section>
-
-        <!-- 12: RESIDENT_P2 -->
-        <section id="screen-RESIDENT_P2" class="screen centered">
-            <div class="radial-timer-lg mb-8">
-                <svg viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="54" class="circle-bg blue-bg" />
-                    <circle id="res-p2-radial" cx="60" cy="60" r="54" class="circle-fill blue stroke-width-3" stroke-dasharray="339.29" stroke-dashoffset="339.29" transform="rotate(-90 60 60)" />
-                </svg>
-                <div id="p2-lock-icon" class="timer-icon absolute-center">🔒</div>
-            </div>
-            <h1 id="p2-status-text" class="title fw-300 secondary-color">Aguarde...</h1>
-            <p class="caption tertiary mt-4">Verificando segurança da passagem</p>
-        </section>
-
-        <!-- 13: REVERSE_PICKUP -->
-        <section id="screen-REVERSE_PICKUP" class="screen centered">
-            <div class="pill purple-pill mb-4"><span class="caption purple">COLETA REVERSA</span></div>
-            <h1 id="ui-reverse-carrier" class="title mb-10">Transportadora</h1>
-            
-            <div class="instruction-group mb-12">
-                <svg class="arrow-icon pulse-left white-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                <p class="body-text mt-4">Retire o pacote e saia</p>
-            </div>
-            
-            <div class="glass-card mb-auto">
-                <span class="caption tertiary">Variação detectada</span>
-                <h1 id="ui-reverse-delta" class="title purple mt-2">Δ 0.0 kg</h1>
-            </div>
-            
-            <div class="progress-footer mt-auto">
-                <div class="progress-track"><div id="ui-reverse-timer-bar" class="progress-bar orange" style="width: 100%"></div></div>
-            </div>
-        </section>
-
-        <!-- 14: DOOR_ALERT -->
-        <section id="screen-DOOR_ALERT" class="screen centered">
-            <div class="ring-pulse mb-8 warning-ring">
-                <span class="icon-xl red-color">⚠</span>
-            </div>
-            <h1 class="hero-text red-color spaced">PORTA ABERTA</h1>
-            <p class="title secondary-color mt-4">Feche a porta imediatamente</p>
-            
-            <h2 id="ui-door-alert-time" class="title fw-200 orange-color mt-8">Aberta há: 00:00</h2>
-            
-            <div class="glass-card mt-auto mb-10">
-                <p id="ui-msg-door-alert" class="body-text secondary text-center"></p>
-            </div>
-        </section>
-
-        <!-- 15: MAINTENANCE -->
-        <section id="screen-MAINTENANCE" class="screen centered">
-            <div class="icon-xl yellow-color mb-4">🔧</div>
-            <h1 class="title yellow-color">Modo Manutenção</h1>
-            <p class="body-text secondary mt-2 mb-10">Operações desabilitadas temporariamente</p>
-            
-            <div class="health-grid mb-10">
-                <div class="health-item"><span class="caption">QR</span><span class="dot green-dot"></span></div>
-                <div class="health-item"><span class="caption">Balança</span><span class="dot green-dot"></span></div>
-                <div class="health-item"><span class="caption">Radar</span><span class="dot green-dot"></span></div>
-                <div class="health-item"><span class="caption">Corrente P1</span><span class="dot green-dot"></span></div>
-                <div class="health-item"><span class="caption">Corrente P2</span><span class="dot green-dot"></span></div>
-                <div class="health-item"><span class="caption">Acesso</span><span class="dot green-dot"></span></div>
-            </div>
-            
-            <p id="ui-health-score" class="body-text">Score: 100/100</p>
-            <p class="caption tertiary mt-auto mb-10 text-center">Para sair do modo manutenção, desative no Home Assistant</p>
-        </section>
-
-        <!-- 16: ERROR -->
-        <section id="screen-ERROR" class="screen centered">
-            <div class="hex-badge red-badge mb-6 shake-anim">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </div>
-            <h1 class="title red-color mb-4">Falha no sistema</h1>
-            <div class="mono-text padding-sm bg-darken tertiary-color border-radius-sm mb-12" id="ui-error-code">SYSTEM_FAIL</div>
-            
-            <p id="ui-msg-erro" class="body-text mb-12 px-6 text-center">ERRO DE LEITURA. Toque na campainha abaixo.</p>
-            
-            <div class="instruction-group mt-auto mb-10">
-                <svg class="arrow-icon bounce-down yellow-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13"></polyline><polyline points="7 6 12 11 17 6"></polyline></svg>
-                <p class="caption yellow mt-4">Aperte a campainha</p>
-            </div>
-        </section>
-
-        <!-- 17: SETTINGS (iOS Style) -->
-        <section id="screen-SETTINGS" class="screen">
-            <header class="screen-header mb-6">
-                <button id="btn-settings-back" class="icon-btn">✕</button>
-                <h1 class="title">Ajustes</h1>
-                <div style="width: 48px;"></div> <!-- spacer -->
-            </header>
-            
-            <div class="settings-list">
-                <div class="settings-group">
-                    <h3 class="caption tertiary mb-2 ml-4">ACESSOS E TRAVAS</h3>
-                    <div class="glass-card settings-card">
-                        <div class="setting-item">
-                            <span class="body-text">Ativar Strike P2</span>
-                            <label class="ios-switch">
-                                <input type="checkbox" id="cfg-enable-p2">
-                                <span class="ios-slider"></span>
-                            </label>
-                        </div>
-                        <div class="setting-divider"></div>
-                        <div class="setting-item">
-                            <span class="body-text">Tempo P1 (ms)</span>
-                            <input type="number" id="cfg-p1-ms" class="ios-input" value="3000">
-                        </div>
-                        <div class="setting-divider"></div>
-                        <div class="setting-item">
-                            <span class="body-text">Tempo P2 (ms)</span>
-                            <input type="number" id="cfg-p2-ms" class="ios-input" value="3000">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-group mt-8">
-                    <h3 class="caption tertiary mb-2 ml-4">HARDWARE V8</h3>
-                    <div class="glass-card settings-card">
-                        <div class="setting-item">
-                            <span class="body-text">Brilho LED Halo</span>
-                            <input type="range" id="cfg-led-brt" min="0" max="255" class="ios-range">
-                        </div>
-                        <div class="setting-divider"></div>
-                        <div class="setting-item">
-                            <span class="body-text">Pulso Portão (ms)</span>
-                            <input type="number" id="cfg-gate-ms" class="ios-input" value="500">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-group mt-8">
-                    <h3 class="caption tertiary mb-2 ml-4">SISTEMA</h3>
-                    <div class="glass-card settings-card">
-                        <div class="setting-item">
-                            <span class="body-text">Modo Manutenção</span>
-                            <label class="ios-switch">
-                                <input type="checkbox" id="cfg-maint">
-                                <span class="ios-slider"></span>
-                            </label>
-                        </div>
-                        <div class="setting-divider"></div>
-                        <button id="btn-logout" class="danger-btn-text mt-2">Finalizar Sessão</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Fallback Popup (WAITING_QR timeout) -->
-    <div id="fallback-popup" class="glass-popup slide-up hidden">
-        <p class="body-text secondary">Não está conseguindo?</p>
-        <p class="caption tertiary mt-1">Use o interfone ou ligue</p>
-        <div class="phone-group mt-4 mb-4 flex-row align-center">
-            <span class="icon-md blue-color mr-2">☎</span>
-            <h1 id="ui-telefone" class="title font-600 blue-color">(81) 9999-9999</h1>
-        </div>
-        <button id="btn-interfone" class="ghost-btn blue-btn">Chamar interfone</button>
+  <!-- 1 · IDLE -->
+  <section class="screen" id="s-IDLE">
+    <div class="clock-idle" style="position:absolute;top:12px;right:20px;opacity:0.38;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+      <div style="font-size:24px;font-weight:200;color:var(--t1)" id="idle-hm">--:--</div>
+      <div style="font-size:10px;letter-spacing:1px;color:var(--t3);text-transform:uppercase" id="idle-date">---</div>
     </div>
+    <div class="idle-wrap" style="display:flex;flex-direction:column;align-items:center;gap:18px">
+      <div class="idle-logo">rlight</div>
+      <div class="idle-dot"></div>
+    </div>
+  </section>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/lib/qrcode.min.js"></script>
-    
-    <!-- Firebase SDK v10 (Modular) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        
-        window.FirebaseSDK = { initializeApp, getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence };
-    </script>
+  <!-- 2 · AWAKE / 3 · WAITING_QR (same screen, shimmer activates) -->
+  <section class="screen" id="s-AWAKE">
+    <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:0">
+      <!-- TOP -->
+      <div class="awake-top tc" style="margin-bottom:16px">
+        <div class="awake-addr">Rua Hermes da Fonseca, 315 — CEP 54400-333</div>
+        <div style="font-size:13px;color:var(--t3);margin-top:2px">Recebedores autorizados:</div>
+        <div class="awake-residents">Willian Rupert · Maria Aparecida</div>
+      </div>
+      <!-- MID -->
+      <div class="awake-mid" style="padding:20px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);width:100%">
+        <div class="awake-main-title">LEIA O CÓDIGO DO PACOTE</div>
+        <div class="awake-sub">Aproxime a etiqueta de rastreio abaixo</div>
+      </div>
+      <!-- BOTTOM ARROW -->
+      <div class="awake-arrow-zone" style="margin-top:18px">
+        <div class="qr-glow">
+          <svg class="arrow-svg arrow-diag" viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="13 17 18 12 13 7"/>
+            <polyline points="6 17 11 12 6 7"/>
+          </svg>
+        </div>
+        <div class="lbl" style="font-size:11px;font-weight:600;letter-spacing:1.5px;color:var(--yellow);opacity:0.85;text-transform:uppercase">Leitor aqui</div>
+      </div>
+    </div>
+    <!-- Shimmer -->
+    <div class="shimmer-strip" id="shimmer"></div>
+    <!-- Footer -->
+    <div class="prog-footer">
+      <div class="label" id="awake-timer-txt">Aguardando leitura · 30s</div>
+      <div class="prog-track"><div class="prog-bar yellow" id="awake-bar" style="width:100%"></div></div>
+    </div>
+  </section>
 
-    <script src="app.js"></script>
+  <!-- 4 · AUTHORIZED -->
+  <section class="screen" id="s-AUTHORIZED">
+    <div class="auth-circle">
+      <svg class="auth-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <div class="auth-title">ACESSO LIBERADO</div>
+    <div class="auth-carrier" id="auth-carrier">via CORREIOS</div>
+    <div class="auth-instruction">
+      <svg class="arrow-svg arrow-right" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+      <div class="auth-push">Empurre a porta</div>
+      <div class="auth-sub">A fechadura está desbloqueada</div>
+    </div>
+    <!-- Radial timer -->
+    <div class="radial-sm">
+      <svg viewBox="0 0 36 36">
+        <path class="circ-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        <path class="circ-fill green" id="auth-radial" stroke-dasharray="100,100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 5 · INSIDE_WAIT -->
+  <section class="screen" id="s-INSIDE_WAIT">
+    <div class="inside-icon">📦</div>
+    <div class="inside-title">Coloque o pacote na balança</div>
+    <div class="inside-sub">Qualquer posição da plataforma</div>
+    <div class="glass-card weight-card" style="margin-top:22px">
+      <div class="weight-lbl">Peso detectado</div>
+      <div class="weight-val" id="inside-weight">—</div>
+      <div class="weight-bar-wrap">
+        <div class="prog-track"><div class="prog-bar green" id="inside-wbar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="prog-footer">
+      <div class="label">Tempo restante para depósito</div>
+      <div class="prog-track"><div class="prog-bar orange" id="inside-tbar" style="width:100%"></div></div>
+    </div>
+  </section>
+
+  <!-- 6 · DELIVERING -->
+  <section class="screen" id="s-DELIVERING">
+    <div class="glass-card success deliv-card">
+      <div class="deliv-lbl">Pacote registrado</div>
+      <div class="deliv-weight" id="deliv-weight">1.24 kg</div>
+    </div>
+    <div class="deliv-inst">
+      <svg class="arrow-svg arrow-left" viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      <div class="deliv-inst-title">Saia e feche a porta</div>
+      <div class="deliv-inst-sub">O recibo será gerado automaticamente</div>
+    </div>
+    <div class="deliv-warning">
+      <div class="pill orange">⚠ Não feche antes de sair do corredor</div>
+    </div>
+  </section>
+
+  <!-- 7 · DOOR_REOPENED -->
+  <section class="screen" id="s-DOOR_REOPENED">
+    <div style="font-size:68px">🚪</div>
+    <div class="door-title">Aguardando saída...</div>
+    <div class="door-sub">Feche a porta completamente</div>
+    <div class="mmwave-pill" style="margin-top:28px">
+      <div class="pill orange" id="mmwave-pill">● Presença detectada</div>
+    </div>
+    <div class="spinner-mini"></div>
+  </section>
+
+  <!-- 8 · CONFIRMING -->
+  <section class="screen" id="s-CONFIRMING">
+    <div class="ios-spinner"></div>
+    <div class="conf-title">Gerando comprovante</div>
+    <div class="conf-sub">Registrando peso e assinatura criptográfica</div>
+    <div class="steps">
+      <div class="step" id="st1" style="animation-delay:0s">
+        <div class="step-dot">○</div>
+        <span>Estabilizando balança...</span>
+      </div>
+      <div class="step" id="st2" style="animation-delay:0.5s">
+        <div class="step-dot">○</div>
+        <span>Capturando imagem...</span>
+      </div>
+      <div class="step" id="st3" style="animation-delay:1s">
+        <div class="step-dot">○</div>
+        <span>Assinando token...</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · RECEIPT -->
+  <section class="screen" id="s-RECEIPT">
+    <div class="receipt-head">
+      <h1>Entrega registrada</h1>
+      <p>Fotografe o código abaixo para o seu comprovante</p>
+    </div>
+    <div class="receipt-panels">
+      <div class="rp-left">
+        <div class="receipt-photo-placeholder">
+          <div style="font-size:36px">📷</div>
+          <div style="font-size:12px;letter-spacing:0.5px;color:var(--t3)">Foto da entrega</div>
+        </div>
+        <div class="receipt-meta">
+          <div class="pill green" style="margin-top:8px">via CORREIOS</div>
+          <div style="font-size:15px;color:var(--t2);margin-top:6px">1.24 kg</div>
+          <div style="font-size:11px;color:var(--t3);letter-spacing:0.5px">Hoje, 14:32</div>
+        </div>
+      </div>
+      <div class="rp-divider"></div>
+      <div class="rp-right">
+        <div class="qr-box">
+          <div class="qr-placeholder"></div>
+        </div>
+        <div class="receipt-meta" style="margin-top:10px">
+          <div style="font-size:11px;font-weight:600;letter-spacing:2px;color:var(--t3);text-transform:uppercase">Comprovante Digital</div>
+          <div class="receipt-url">portaria.rlight.com.br</div>
+          <div class="receipt-token">a3f9c2b1</div>
+        </div>
+      </div>
+    </div>
+    <div class="prog-footer">
+      <div class="label">Esta tela fecha automaticamente</div>
+      <div class="prog-track"><div class="prog-bar blue" id="receipt-bar" style="width:100%"></div></div>
+    </div>
+  </section>
+
+  <!-- 10 · ABORTED -->
+  <section class="screen" id="s-ABORTED">
+    <div class="aborted-icon">○</div>
+    <div class="aborted-title">Nenhum pacote registrado</div>
+    <div class="aborted-sub">O ciclo foi encerrado sem depósito</div>
+  </section>
+
+  <!-- 11 · RESIDENT_P1 -->
+  <section class="screen" id="s-RESIDENT_P1">
+    <div class="tc">
+      <div class="res-welcome">Bem-vindo</div>
+      <div class="res-name" id="res-name">Willian</div>
+    </div>
+    <div class="res-inst">
+      <svg class="arrow-svg arrow-right" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+      <div class="res-inst-txt">Entre e deixe a porta fechar</div>
+    </div>
+    <div class="glass-card res-card">
+      <div class="res-card-icon">🔓</div>
+      <div class="res-card-body">
+        <p>A porta interna abrirá automaticamente</p>
+        <small>Aguarde dentro do corredor</small>
+      </div>
+    </div>
+    <div class="radial-sm">
+      <svg viewBox="0 0 36 36">
+        <path class="circ-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        <path class="circ-fill green" id="res-p1-radial" stroke-dasharray="100,100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 12 · RESIDENT_P2 -->
+  <section class="screen" id="s-RESIDENT_P2">
+    <div class="p2-radial-wrap">
+      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(10,132,255,0.1)" stroke-width="4"/>
+        <circle cx="60" cy="60" r="52" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round"
+          stroke-dasharray="326.73" stroke-dashoffset="0" id="p2-radial"
+          transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 0.1s linear"/>
+      </svg>
+      <div class="p2-lock" id="p2-lock">🔒</div>
+    </div>
+    <div class="p2-status" id="p2-txt">Aguarde...</div>
+    <div class="p2-sub">Verificando segurança da passagem</div>
+  </section>
+
+  <!-- 13 · REVERSE_PICKUP -->
+  <section class="screen" id="s-REVERSE_PICKUP">
+    <div class="pill purple">COLETA REVERSA</div>
+    <div class="rev-carrier" id="rev-carrier">Mercado Livre</div>
+    <div class="rev-inst">
+      <svg class="arrow-svg arrow-left" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      <div style="font-size:18px;color:var(--t1);margin-top:10px">Retire o pacote e saia</div>
+    </div>
+    <div class="glass-card purple rev-card">
+      <div style="font-size:11px;font-weight:600;letter-spacing:1.8px;color:var(--t3);text-transform:uppercase">Variação detectada</div>
+      <div class="rev-delta" id="rev-delta">Δ −1.24 kg</div>
+    </div>
+    <div class="prog-footer">
+      <div class="prog-track"><div class="prog-bar orange" id="rev-bar" style="width:100%"></div></div>
+    </div>
+  </section>
+
+  <!-- 14 · DOOR_ALERT -->
+  <section class="screen" id="s-DOOR_ALERT">
+    <div class="door-ring">
+      <span>⚠</span>
+    </div>
+    <div class="door-hero">PORTA ABERTA</div>
+    <div class="door-subtitle">Feche a porta imediatamente</div>
+    <div class="door-timer" id="door-timer">Aberta há: 00:00</div>
+    <div class="door-msg glass-card" style="margin-top:20px">
+      <p style="font-size:15px;color:var(--t2);text-align:center;line-height:1.5" id="door-msg">Se você não está no corredor, acesse o Home Assistant</p>
+    </div>
+  </section>
+
+  <!-- 15 · MAINTENANCE -->
+  <section class="screen" id="s-MAINTENANCE">
+    <div class="maint-icon">🔧</div>
+    <div class="maint-title">Modo Manutenção</div>
+    <div class="maint-sub">Operações desabilitadas temporariamente</div>
+    <div class="health-grid">
+      <div class="health-item"><span class="health-name">QR</span><span class="health-dot ok"></span></div>
+      <div class="health-item"><span class="health-name">Balança</span><span class="health-dot ok"></span></div>
+      <div class="health-item"><span class="health-name">Radar</span><span class="health-dot ok"></span></div>
+      <div class="health-item"><span class="health-name">Corrente P1</span><span class="health-dot ok"></span></div>
+      <div class="health-item"><span class="health-name">Corrente P2</span><span class="health-dot deg"></span></div>
+      <div class="health-item"><span class="health-name">Acesso</span><span class="health-dot ok"></span></div>
+    </div>
+    <div class="maint-score">Score: 95/100</div>
+    <div class="maint-footer">Para sair do modo manutenção, desative no Home Assistant</div>
+  </section>
+
+  <!-- 16 · ERROR -->
+  <section class="screen" id="s-ERROR">
+    <div class="err-hex">
+      <svg class="hex-bg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="60,4 112,32 112,88 60,116 8,88 8,32" fill="rgba(255,69,58,0.08)" stroke="var(--red)" stroke-width="2"/>
+      </svg>
+      <svg class="err-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </div>
+    <div class="err-title">Falha no sistema</div>
+    <div class="err-code" id="err-code">STRIKE_P1_FAIL</div>
+    <div class="err-msg" id="err-msg">Chame no WhatsApp (81) 99999-9999</div>
+    <div class="err-bell">
+      <svg class="arrow-svg arrow-down" viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="7 13 12 18 17 13"/>
+        <polyline points="7 6 12 11 17 6"/>
+      </svg>
+      <div class="lbl">Aperte a campainha</div>
+    </div>
+  </section>
+
+</div><!-- /app -->
+
+<!-- FALLBACK POPUP -->
+<div id="fallback-popup">
+  <div class="fb-title">Não está conseguindo?</div>
+  <div class="fb-sub">Use o interfone ou ligue</div>
+  <div class="fb-phone">
+    <span class="fb-phone-icon">☎</span>
+    <span class="fb-phone-num">(81) 9999-9999</span>
+  </div>
+  <button class="fb-btn">Chamar interfone</button>
+</div>
+
+<!-- NAV DEMO -->
+<div id="nav">
+  <button class="nav-btn" data-s="IDLE">IDLE</button>
+  <button class="nav-btn" data-s="AWAKE">AWAKE</button>
+  <button class="nav-btn" data-s="WAITING_QR">QR</button>
+  <button class="nav-btn" data-s="AUTHORIZED">AUTH</button>
+  <button class="nav-btn" data-s="INSIDE_WAIT">INSIDE</button>
+  <button class="nav-btn" data-s="DELIVERING">DELIV</button>
+  <button class="nav-btn" data-s="DOOR_REOPENED">DOOR_RE</button>
+  <button class="nav-btn" data-s="CONFIRMING">CONFIRM</button>
+  <button class="nav-btn" data-s="RECEIPT">RECEIPT</button>
+  <button class="nav-btn" data-s="ABORTED">ABORT</button>
+  <button class="nav-btn" data-s="RESIDENT_P1">RES P1</button>
+  <button class="nav-btn" data-s="RESIDENT_P2">RES P2</button>
+  <button class="nav-btn" data-s="REVERSE_PICKUP">REVERSE</button>
+  <button class="nav-btn" data-s="DOOR_ALERT">D·ALERT</button>
+  <button class="nav-btn" data-s="MAINTENANCE">MAINT</button>
+  <button class="nav-btn" data-s="ERROR">ERROR</button>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let currentState = 'IDLE';
+let awakeInterval = null;
+let awakeSeconds = 30;
+let doorSeconds = 0;
+let doorInterval = null;
+let confirmStep = 0;
+let confirmTimer = null;
+let p2Interval = null;
+let fallbackTimer = null;
+let fallbackVisible = false;
+
+const stateLabels = {
+  IDLE:'',
+  AWAKE:'AGUARDANDO LEITURA',
+  WAITING_QR:'AGUARDANDO LEITURA',
+  AUTHORIZED:'ACESSO LIBERADO',
+  INSIDE_WAIT:'DENTRO DO CORREDOR',
+  DELIVERING:'DEPÓSITO EM CURSO',
+  DOOR_REOPENED:'AGUARDANDO SAÍDA',
+  CONFIRMING:'GERANDO COMPROVANTE',
+  RECEIPT:'COMPROVANTE',
+  ABORTED:'CICLO ENCERRADO',
+  RESIDENT_P1:'MORADOR — P1',
+  RESIDENT_P2:'MORADOR — P2',
+  REVERSE_PICKUP:'COLETA REVERSA',
+  DOOR_ALERT:'ALERTA DE SEGURANÇA',
+  MAINTENANCE:'MANUTENÇÃO',
+  ERROR:'FALHA CRÍTICA',
+};
+
+// ─── CLOCK ───────────────────────────────────────────────
+const days = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+const months = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+
+function pad(n){return String(n).padStart(2,'0')}
+
+let sepVisible = true;
+function updateClock(){
+  const now = new Date();
+  const h = pad(now.getHours()), m = pad(now.getMinutes()), s = pad(now.getSeconds());
+  document.getElementById('clk-hm').textContent = h+':'+m;
+  document.getElementById('clk-s').textContent = s;
+  const dstr = days[now.getDay()]+', '+pad(now.getDate())+' '+months[now.getMonth()];
+  document.getElementById('clk-date').textContent = dstr;
+  document.getElementById('idle-hm').textContent = h+':'+m;
+  document.getElementById('idle-date').textContent = dstr;
+  // blink sep handled by CSS
+}
+setInterval(updateClock,1000);
+updateClock();
+
+// ─── BLOB COLORS ─────────────────────────────────────────
+const blobConfigs = {
+  IDLE:       {b1:'#30D158',b2:'#0A84FF',op1:0.06,op2:0.06},
+  AWAKE:      {b1:'#FFD60A',b2:'#30D158',op1:0.18,op2:0.14},
+  WAITING_QR: {b1:'#FFD60A',b2:'#30D158',op1:0.2,op2:0.12},
+  AUTHORIZED: {b1:'#30D158',b2:'#30D158',op1:0.28,op2:0.18},
+  INSIDE_WAIT:{b1:'#30D158',b2:'#0A84FF',op1:0.18,op2:0.14},
+  DELIVERING: {b1:'#30D158',b2:'#FFD60A',op1:0.18,op2:0.14},
+  DOOR_REOPENED:{b1:'#FFD60A',b2:'#0A84FF',op1:0.14,op2:0.12},
+  CONFIRMING: {b1:'#0A84FF',b2:'#30D158',op1:0.16,op2:0.14},
+  RECEIPT:    {b1:'#0A84FF',b2:'#30D158',op1:0.18,op2:0.14},
+  ABORTED:    {b1:'#636366',b2:'#636366',op1:0.12,op2:0.10},
+  RESIDENT_P1:{b1:'#30D158',b2:'#0A84FF',op1:0.22,op2:0.16},
+  RESIDENT_P2:{b1:'#0A84FF',b2:'#0A84FF',op1:0.22,op2:0.16},
+  REVERSE_PICKUP:{b1:'#BF5AF2',b2:'#0A84FF',op1:0.18,op2:0.14},
+  DOOR_ALERT: {b1:'#FF453A',b2:'#FF9F0A',op1:0.28,op2:0.22},
+  MAINTENANCE:{b1:'#FFD60A',b2:'#FF9F0A',op1:0.16,op2:0.12},
+  ERROR:      {b1:'#FF453A',b2:'#8B0000',op1:0.30,op2:0.20},
+};
+
+function setBlobs(state){
+  const c = blobConfigs[state]||blobConfigs.IDLE;
+  document.getElementById('b1').style.background = c.b1;
+  document.getElementById('b2').style.background = c.b2;
+  document.getElementById('b1').style.opacity = c.op1;
+  document.getElementById('b2').style.opacity = c.op2;
+}
+
+// ─── TRANSITION ──────────────────────────────────────────
+function goto(state){
+  if(currentState===state && state!=='AWAKE') return;
+
+  // cleanup
+  clearInterval(awakeInterval); awakeInterval=null;
+  clearInterval(doorInterval); doorInterval=null;
+  clearInterval(confirmTimer); confirmTimer=null;
+  clearInterval(p2Interval); p2Interval=null;
+  clearTimeout(fallbackTimer); fallbackTimer=null;
+  document.getElementById('fallback-popup').classList.remove('show');
+  fallbackVisible=false;
+  document.getElementById('shimmer').classList.remove('active');
+
+  // hide all
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.s===state);
+  });
+
+  // HUD
+  const hud = document.getElementById('hud');
+  if(state==='IDLE'){
+    hud.classList.add('hide');
+  } else {
+    hud.classList.remove('hide');
+    document.getElementById('hud-state').textContent = stateLabels[state]||state;
+  }
+
+  setBlobs(state);
+
+  // show
+  const el = document.getElementById('s-'+state);
+  if(el) setTimeout(()=>el.classList.add('active'),50);
+
+  currentState = state;
+
+  // state-specific logic
+  switch(state){
+    case 'AWAKE':
+    case 'WAITING_QR':
+      startAwakeTimer();
+      if(state==='WAITING_QR'){
+        document.getElementById('shimmer').classList.add('active');
+        fallbackTimer = setTimeout(()=>showFallback(),15000);
+      }
+      break;
+    case 'AUTHORIZED':
+      startRadialTimer('auth-radial',10000);
+      break;
+    case 'DOOR_ALERT':
+      startDoorAlertTimer();
+      break;
+    case 'CONFIRMING':
+      startConfirmingSteps();
+      break;
+    case 'RESIDENT_P1':
+      startRadialTimer('res-p1-radial',90000);
+      break;
+    case 'RESIDENT_P2':
+      startP2Timer();
+      break;
+    case 'ERROR':
+      document.querySelector('.err-hex').classList.add('shake');
+      setTimeout(()=>document.querySelector('.err-hex').classList.remove('shake'),700);
+      break;
+    case 'ABORTED':
+      setTimeout(()=>goto('IDLE'),3000);
+      break;
+  }
+}
+
+// ─── AWAKE TIMER ─────────────────────────────────────────
+function startAwakeTimer(){
+  awakeSeconds = 30;
+  const bar = document.getElementById('awake-bar');
+  const txt = document.getElementById('awake-timer-txt');
+  bar.style.width='100%';
+  awakeInterval = setInterval(()=>{
+    awakeSeconds--;
+    const pct = (awakeSeconds/30)*100;
+    bar.style.width = pct+'%';
+    txt.textContent = 'Aguardando leitura · '+awakeSeconds+'s';
+    if(awakeSeconds<=0){
+      clearInterval(awakeInterval);
+      goto('IDLE');
+    }
+  },1000);
+}
+
+// ─── RADIAL TIMER ────────────────────────────────────────
+function startRadialTimer(id, ms){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const total = ms/1000;
+  let rem = total;
+  el.setAttribute('stroke-dasharray','100,100');
+  const iv = setInterval(()=>{
+    rem -= 0.1;
+    const pct = Math.max(0,(rem/total)*100);
+    el.setAttribute('stroke-dasharray', pct+',100');
+    if(rem<=0) clearInterval(iv);
+  },100);
+}
+
+// ─── DOOR ALERT TIMER ────────────────────────────────────
+function startDoorAlertTimer(){
+  doorSeconds = 0;
+  const el = document.getElementById('door-timer');
+  doorInterval = setInterval(()=>{
+    doorSeconds++;
+    const m = Math.floor(doorSeconds/60), s = doorSeconds%60;
+    el.textContent = 'Aberta há: '+pad(m)+':'+pad(s);
+  },1000);
+}
+
+// ─── CONFIRMING STEPS ────────────────────────────────────
+function startConfirmingSteps(){
+  const steps = ['st1','st2','st3'];
+  let i = 0;
+  // reset
+  steps.forEach(id=>{
+    const el=document.getElementById(id);
+    el.classList.remove('done');
+    el.style.opacity='0';
+  });
+  // show each one
+  steps.forEach((id,idx)=>{
+    setTimeout(()=>{
+      const el=document.getElementById(id);
+      el.style.animation='step-in 0.35s ease forwards';
+      el.style.opacity='1';
+    },idx*400);
+    setTimeout(()=>{
+      const el=document.getElementById(id);
+      el.classList.add('done');
+      el.querySelector('.step-dot').textContent='✓';
+    },idx*400+800);
+  });
+}
+
+// ─── P2 TIMER ────────────────────────────────────────────
+function startP2Timer(){
+  const total = 326.73;
+  const ms = 2000;
+  const el = document.getElementById('p2-radial');
+  const lock = document.getElementById('p2-lock');
+  const txt = document.getElementById('p2-txt');
+  el.style.strokeDashoffset = total;
+  lock.textContent='🔒';
+  txt.textContent='Aguarde...';
+  txt.style.color='var(--t2)';
+  let progress = 0;
+  const step = 50;
+  const inc = total/(ms/step);
+  p2Interval = setInterval(()=>{
+    progress += inc;
+    el.style.strokeDashoffset = Math.max(0, total - progress);
+    if(progress >= total){
+      clearInterval(p2Interval);
+      lock.textContent='🔓';
+      txt.textContent='Entrando';
+      txt.style.color='var(--blue)';
+    }
+  },step);
+}
+
+// ─── FALLBACK ─────────────────────────────────────────────
+function showFallback(){
+  document.getElementById('fallback-popup').classList.add('show');
+  fallbackVisible=true;
+}
+
+// ─── NAV ─────────────────────────────────────────────────
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>goto(btn.dataset.s));
+});
+
+// ─── INIT ────────────────────────────────────────────────
+goto('IDLE');
+
+// Auto-demo: cycle through all screens
+let demoStates = ['IDLE','AWAKE','WAITING_QR','AUTHORIZED','INSIDE_WAIT','DELIVERING',
+  'DOOR_REOPENED','CONFIRMING','RECEIPT','ABORTED','RESIDENT_P1','RESIDENT_P2',
+  'REVERSE_PICKUP','DOOR_ALERT','MAINTENANCE','ERROR'];
+let demoIdx = 0;
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight'){
+    demoIdx = (demoIdx+1)%demoStates.length;
+    goto(demoStates[demoIdx]);
+  } else if(e.key==='ArrowLeft'){
+    demoIdx = (demoIdx-1+demoStates.length)%demoStates.length;
+    goto(demoStates[demoIdx]);
+  }
+});
+</script>
 </body>
 </html>
