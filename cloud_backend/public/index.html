@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="rlight">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="apple-touch-icon" href="/favicon.png">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
@@ -42,67 +43,74 @@
    ═══════════════════════════════════════════════════ */
 
 html {
-  height: 100vh;
-  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100dvh;
   background: #000000;
+  color: var(--fg);
 }
 @media (prefers-color-scheme: light) {
-  html { background: #F2F2F7; }
+  html {
+    background: #F2F2F7;
+  }
 }
 body {
-  min-height: 100vh;
-  margin: 0; padding: 0; overflow: hidden;
-  color: var(--fg); background: var(--bg);
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100dvh;
+  background: transparent;
   display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
 }
-
-/* Background animado */
+/* Background overlay - renders behind Dynamic Island */
 .bg {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   z-index: 0;
   pointer-events: none;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(10,132,255,.18), transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(94,92,230,.18),  transparent 50%);
+  background: #000;
+}
+@media (prefers-color-scheme: light) {
+  .bg {
+    background: #F2F2F7;
+  }
 }
 
 /* ── PAINEL PRINCIPAL (mobile < 601px) ──────────────── */
 .panel {
   position: fixed;
-  /* Tentativa 19: panel cobre toda a tela com fundo sólido */
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  inset: 0;
+  width: 100dvw;
+  height: 100dvh;
   z-index: 1;
-  background: var(--bg); /* Fundo sólido opaco */
-  overflow: hidden; /* O panel-content cuida do scroll */
+  background: transparent;
+  overflow: hidden;
 }
 
 .panel-content {
   width: 100%;
-  height: 100%;
+  height: 100dvh;
   overflow-y: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   background: var(--glass);
-  backdrop-filter: blur(60px);
-  -webkit-backdrop-filter: blur(60px);
+  /* backdrop-filter temporariamente removido - causa issues no iOS */
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: max(44px, env(safe-area-inset-top, 44px));
-  padding-bottom: max(34px, env(safe-area-inset-bottom, 34px));
-  padding-left: max(16px, env(safe-area-inset-left, 16px));
-  padding-right: max(16px, env(safe-area-inset-right, 16px));
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 .panel-content::-webkit-scrollbar { display: none; }
 
 /* ── DESKTOP (≥ 601px) ────────────────────────────── */
 @media (min-width: 601px) {
-  html { height: auto; overflow: auto; }
-  body { min-height: 100vh; background: var(--bg); }
+  html { position: relative; height: auto; overflow: auto; inset: auto; }
+  body { position: relative; height: auto; overflow: auto; inset: auto; }
   .bg  { bottom: 0; }
   .panel {
     position: relative;
@@ -112,6 +120,13 @@ body {
     border: 1px solid var(--border);
     border-radius: 44px; padding: 36px 28px;
     overflow-y: auto;
+  }
+  .panel-content {
+    height: auto;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    padding-left: 28px;
+    padding-right: 28px;
   }
 }
 
