@@ -16,13 +16,14 @@ class HomeAssistantIntegration:
         self.client.on_message = self._on_message
         
         self.PREFIX = "homeassistant"
-        self.DEVICE_ID = "rlight_portaria_v6"
+        self.DEVICE_ID = "rlight_portaria_v8"
         
         # Tópicos HA->OPi (Comandos de Ação)
         self.CMD_TOPIC_P2 = f"rlight/{self.DEVICE_ID}/cmd_p2"
         self.CMD_TOPIC_GATE = f"rlight/{self.DEVICE_ID}/cmd_gate"
         self.CMD_TOPIC_RELOAD = f"rlight/{self.DEVICE_ID}/cmd_reload_nvs"
         self.CMD_TOPIC_UNLOCK_RESIDENT = f"rlight/{self.DEVICE_ID}/cmd_unlock_resident"
+        self.SET_TOPIC_P2_DELAY = f"rlight/{self.DEVICE_ID}/set_p2_delay"
         
         # Tópicos HA->OPi (Textos Dinâmicos - Setters)
         self.SET_TOPIC_ENDERECO = f"rlight/{self.DEVICE_ID}/set_endereco"
@@ -33,6 +34,11 @@ class HomeAssistantIntegration:
         self.STAT_TOPIC_FSM = f"rlight/{self.DEVICE_ID}/fsm_state"
         self.STAT_TOPIC_WEIGHT = f"rlight/{self.DEVICE_ID}/weight_g"
         self.STAT_TOPIC_GATE = f"rlight/{self.DEVICE_ID}/gate_status"
+        self.STAT_TOPIC_P1 = f"rlight/{self.DEVICE_ID}/p1_status"
+        self.STAT_TOPIC_P2 = f"rlight/{self.DEVICE_ID}/p2_status"
+        self.STAT_TOPIC_SCORE = f"rlight/{self.DEVICE_ID}/score"
+        self.STAT_TOPIC_LAST_ACCESS = f"rlight/{self.DEVICE_ID}/last_access"
+        self.EVT_TOPIC = f"rlight/{self.DEVICE_ID}/events"
         
     def start(self):
         try:
@@ -57,6 +63,7 @@ class HomeAssistantIntegration:
             client.subscribe(self.SET_TOPIC_ENDERECO)
             client.subscribe(self.SET_TOPIC_NOMES)
             client.subscribe(self.SET_TOPIC_MSG_ERRO)
+            client.subscribe(self.SET_TOPIC_P2_DELAY)
         else:
             print(f"[MQTT] Recusado. RC={rc}")
             
@@ -83,14 +90,33 @@ class HomeAssistantIntegration:
             dynamic_texts.NOMES_RECEBEDORES = payload
         elif topic == self.SET_TOPIC_MSG_ERRO:
             dynamic_texts.MSG_ERRO = payload
+        elif topic == self.SET_TOPIC_P2_DELAY:
+            try:
+                delay = float(payload)
+                esp32_bridge.send_cmd("CMD_UPDATE_CFG", {"key": "p2_delay_ms", "val": delay})
+            except ValueError:
+                pass
             
     def _on_fsm_change(self, new_state, old_state):
         try:
             self.client.publish(self.STAT_TOPIC_FSM, new_state, retain=True)
             weight = host_fsm.get_weight()
-            self.client.publish(self.STAT_TOPIC_WEIGHT, str(weight), retain=False)
-            gate = "OPEN" if host_fsm.get_gate_open() else "CLOSED"
-            self.client.publish(self.STAT_TOPIC_GATE, gate, retain=False)
+            self.client.publish(self.STAT_TOPIC_WEIGHT, f"{weight:.2f}", retain=False)
+            
+            self.client.publish(self.STAT_TOPIC_GATE, "ON" if host_fsm.get_gate_open() else "OFF", retain=False)
+            self.client.publish(self.STAT_TOPIC_P1, "ON" if host_fsm.get_p1_open() else "OFF", retain=False)
+            self.client.publish(self.STAT_TOPIC_P2, "ON" if host_fsm.get_p2_open() else "OFF", retain=False)
+            self.client.publish(self.STAT_TOPIC_SCORE, str(host_fsm.get_score()), retain=True)
+            
+            last_access = f"{host_fsm.get_carrier() or 'Morador'}: {host_fsm.get_resident_label() or 'Geral'}"
+            self.client.publish(self.STAT_TOPIC_LAST_ACCESS, last_access, retain=True)
+        except Exception as e:
+            print(f"[MQTT] Erro ao publicar telemetria: {e}")
+
+    def publish_event(self, event_type, data):
+        try:
+            payload = {"type": event_type, "data": data}
+            self.client.publish(self.EVT_TOPIC, json.dumps(payload), retain=False)
         except Exception:
             pass
 
@@ -98,8 +124,8 @@ class HomeAssistantIntegration:
         """Injeta dinamicamente Entidades no HA."""
         device_def = {
             "identifiers": [self.DEVICE_ID],
-            "name": "Portaria RLight v6",
-            "model": "OrangePi Zero 3 + ESP32",
+            "name": "Portaria RLight v8",
+            "model": "OrangePi Zero 3 + ESP32-S3",
             "manufacturer": "RLight"
         }
         
@@ -111,9 +137,34 @@ class HomeAssistantIntegration:
         s_peso = {"name": "Balança de Ocorrências", "state_topic": self.STAT_TOPIC_WEIGHT, "unique_id": f"{self.DEVICE_ID}_peso", "unit_of_measurement": "g", "device_class": "weight", "device": device_def}
         self.client.publish(f"{self.PREFIX}/sensor/{self.DEVICE_ID}/peso/config", json.dumps(s_peso), retain=True)
 
-        # Sensor - Gate Status
+        # Binary Sensors - Doors
         s_gate = {"name": "Status Portão", "state_topic": self.STAT_TOPIC_GATE, "unique_id": f"{self.DEVICE_ID}_gate", "device_class": "door", "device": device_def}
         self.client.publish(f"{self.PREFIX}/binary_sensor/{self.DEVICE_ID}/gate/config", json.dumps(s_gate), retain=True)
+
+        s_p1 = {"name": "Status Porta P1", "state_topic": self.STAT_TOPIC_P1, "unique_id": f"{self.DEVICE_ID}_p1", "device_class": "door", "device": device_def}
+        self.client.publish(f"{self.PREFIX}/binary_sensor/{self.DEVICE_ID}/p1/config", json.dumps(s_p1), retain=True)
+
+        s_p2 = {"name": "Status Porta P2", "state_topic": self.STAT_TOPIC_P2, "unique_id": f"{self.DEVICE_ID}_p2", "device_class": "door", "device": device_def}
+        self.client.publish(f"{self.PREFIX}/binary_sensor/{self.DEVICE_ID}/p2/config", json.dumps(s_p2), retain=True)
+
+        # Sensors - Last Access, Score
+        s_last = {"name": "Último Acesso", "state_topic": self.STAT_TOPIC_LAST_ACCESS, "unique_id": f"{self.DEVICE_ID}_last_acc", "icon": "mdi:history", "device": device_def}
+        self.client.publish(f"{self.PREFIX}/sensor/{self.DEVICE_ID}/last_access/config", json.dumps(s_last), retain=True)
+
+        s_score = {"name": "Saúde do Sistema", "state_topic": self.STAT_TOPIC_SCORE, "unique_id": f"{self.DEVICE_ID}_score", "unit_of_measurement": "%", "device": device_def}
+        self.client.publish(f"{self.PREFIX}/sensor/{self.DEVICE_ID}/score/config", json.dumps(s_score), retain=True)
+
+        # Number - P2 Delay
+        n_p2_delay = {
+            "name": "Delay P1->P2 (ms)",
+            "command_topic": self.SET_TOPIC_P2_DELAY,
+            "state_topic": self.SET_TOPIC_P2_DELAY,
+            "unique_id": f"{self.DEVICE_ID}_p2_delay",
+            "min": 0, "max": 10000, "step": 100,
+            "unit_of_measurement": "ms",
+            "device": device_def
+        }
+        self.client.publish(f"{self.PREFIX}/number/{self.DEVICE_ID}/p2_delay/config", json.dumps(n_p2_delay), retain=True)
 
         # Button - Unlock Gate
         b_gate = {"name": "Abrir Portão Garen", "command_topic": self.CMD_TOPIC_GATE, "payload_press": "PRESS", "unique_id": f"{self.DEVICE_ID}_unlock_gate", "icon": "mdi:gate", "device": device_def}
