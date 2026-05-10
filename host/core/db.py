@@ -2,11 +2,13 @@ import sqlite3
 import os
 import threading
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'deliveries.db')
+DB_PATH = "/var/lib/rlight/deliveries.db"
 
 class DatabaseManager:
     def __init__(self):
         self._lock = threading.Lock()
+        # Garante diretório pai existe
+        os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
         self._init_db()
 
     def _get_conn(self):
@@ -24,6 +26,15 @@ class DatabaseManager:
                         carrier TEXT,
                         photo_path TEXT,
                         synced INTEGER DEFAULT 0
+                    )
+                """)
+                # S15: Tabela para ML / Features de Entrega
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS delivery_features (
+                        token_uuid TEXT PRIMARY KEY,
+                        features_json TEXT,
+                        score REAL,
+                        FOREIGN KEY(token_uuid) REFERENCES deliveries(token_uuid)
                     )
                 """)
                 conn.commit()
