@@ -9,5 +9,5 @@ node_modules/
 *.png
 *.db
 __pycache__/
-.env
+.env*
 /tmp/rlight_photos/

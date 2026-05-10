@@ -9,8 +9,6 @@ WorkingDirectory=/opt/rlight/host
 Environment=PYTHONPATH=/opt/rlight/host
 Environment=SMTP_SERVER=smtp.gmail.com
 Environment=SMTP_PORT=587
-Environment=SMTP_USER=user@gmail.com
-Environment=SMTP_PASS=pass
 Environment=MQTT_HOST=localhost
 Environment=MQTT_PORT=1883
 ExecStart=/usr/bin/python3 /opt/rlight/host/main.py
