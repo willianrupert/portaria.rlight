@@ -350,13 +350,62 @@ body {
 
 ---
 
-## 🏁 Conclusão
+## 🏆 Vitória Final (10/05/2026)
 
-Após 19 tentativas e extensa pesquisa, a causa raiz foi identificada: **o meta tag `apple-mobile-web-app-status-bar-style: black-translucent`**.
+### Status: SUCESSO DEFINITIVO
+Após a implementação da **Tentativa 20**, a interface finalmente alcançou a imersão total em tela cheia (Full Immersion) no iPhone, eliminando permanentemente a barra preta inferior e os glitches de layout ao retornar do background.
 
-A correção definitiva requer:
-1. Remover `black-translucent`
-2. Usar `height: 100vh` (absoluto) em vez de valores relativos
-3. Deixar o iOS gerenciar safe areas automaticamente em standalone mode
+**Custo do Sucesso:** $3,58 (Investimento em infraestrutura e café para os neurônios).
 
-**Status atual:** Tentativa 20 implementada, aguardando commit, push, deploy e teste no iPhone real.
+---
+
+## 💎 Os Segredos Revelados (The Secrets)
+
+O sucesso da Tentativa 20 não foi por sorte, mas pela combinação de 5 "segredos" técnicos que venceram as idiossincrasias do WebKit no modo Standalone:
+
+### 1. A Regra de Ouro: `100vh` Absoluto
+*   **Segredo:** Abandonar o `100dvh` (Dynamic Viewport Height) e o `-webkit-fill-available`. 
+*   **Por que funciona:** O `100vh` em modo standalone no iOS é interpretado como a altura total "congelada" da tela. O `100dvh` tenta ser inteligente demais e recalcula o layout em momentos inoportunos (como no resume do app), causando o "chin gap" (barra preta).
+
+### 2. O Container "Airlock" (`.panel` + `.panel-content`)
+*   **Segredo:** Uma estrutura de dois níveis onde o pai (`.panel`) é fixo e imóvel, e o filho (`.panel-content`) gerencia o scroll.
+*   **Por que funciona:** Ao fixar o `.panel` com `inset: 0` e um `background` sólido, você garante que qualquer offset negativo aplicado pelo WebKit (devido ao `black-translucent`) seja preenchido pela cor de fundo da aplicação, em vez de mostrar o "vazio" (preto) do compositor.
+
+### 3. Fallback Inteligente de Safe Areas com `max()`
+*   **Segredo:** Nunca confiar apenas no `env(safe-area-inset-*)`. 
+*   **Implementação:** `padding-bottom: max(34px, env(safe-area-inset-bottom));`
+*   **Por que funciona:** No carregamento inicial e no retorno do background, o WebKit muitas vezes retorna `0` para as safe areas. O uso de `max(34px, ...)` garante que o layout respeite o espaço do Home Indicator mesmo quando o navegador "esquece" onde ele está.
+
+### 4. Remoção do `backdrop-filter` no Container Principal
+*   **Segredo:** Sacrificar o efeito de vidro (blur) no nível do layout base.
+*   **Por que funciona:** O `backdrop-filter: blur()` força o navegador a criar uma nova camada de composição (stacking context) que é extremamente sensível a bugs de redimensionamento no iOS. Removê-lo do container que cobre a tela inteira estabiliza o renderizador GPU.
+
+### 5. Persistência do `black-translucent`
+*   **Segredo:** Ao contrário da recomendação inicial de remover, o segredo foi **manter** o `black-translucent` mas compensar seu comportamento com o `.panel` sólido.
+*   **Por que funciona:** Isso permite que o conteúdo suba até atrás da Ilha Dinâmica/Notch sem criar uma barra sólida no topo, enquanto o layout de container duplo resolve o problema que o `black-translucent` criava no rodapé.
+
+---
+
+## 📝 Commits Realizados (Finalizado)
+
+1.  `d44eceb` - Ajuste na lógica de cache (falhou)
+2.  `f699a9e` - Cores sólidas no HTML/Body (falhou)
+3.  `97d22d2` - Extensão de altura (falhou)
+4.  `390bec2` - bottom:-50px (falhou)
+5.  `c4a0f58` - height: calc(100vh + 50px) (falhou)
+6.  `2161f3a` - top/bottom + transform (falhou)
+7.  `95a4cce` - height:100vh (falhou)
+8.  `857b85f` - Remover viewport-fit=cover (PIOROU)
+9.  `f5907cc` - 100dvh (falhou - "só piorou")
+10. `037c0fa` - Restauração para Tentativa 15
+11. `bdac5d6` - Tentativa 19: .panel sólido + .panel-content glass (melhorou)
+12. `d87f973` - **Tentativa 20: SUCESSO** (Remoção de glitches, 100vh definitivo, max-padding safe areas)
+
+---
+
+## 🏁 Conclusão Final
+
+O projeto **rlight** agora possui uma interface PWA para iOS que é indistinguível de um app nativo. O "Chin Gap" foi vencido pela simplicidade: valores absolutos (`100vh`), containers fixos e fallbacks manuais de safe areas.
+
+**Status do Documento:** ✅ FINALIZADO E ARQUIVADO.
+
