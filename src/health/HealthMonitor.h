@@ -8,7 +8,7 @@ enum class SensorID {
   MMWAVE,
   INA219_P1,
   INA219_P2,
-  WIEGAND,
+  KEYPAD,
   _COUNT
 };
 
@@ -18,6 +18,7 @@ public:
   
   void report(SensorID id, bool ok, const char* context_reason = nullptr);
   bool usable(SensorID id) const;
+  int systemScore() const;
   
   template<typename Func>
   void tryRecover(SensorID id, Func recovery_func) {
