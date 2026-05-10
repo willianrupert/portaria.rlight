@@ -18,7 +18,7 @@ const FsmContext& StateMachine::ctx()     const { return _ctx; }
 FsmContext&       StateMachine::ctx()           { return _ctx; }
 
 void StateMachine::transition(State next) {
-  _ctx.millis_at_sync = millis() - _ctx.state_enter; // S5: Uso improvisado do millis_at_sync pra não precisar trocar headers agora. UsbBridge envia.
+  _ctx.prev_duration_ms = millis() - _ctx.state_enter;
   _onExit(_ctx.state);
   _ctx.state       = next;
   _ctx.state_enter = millis();
@@ -60,7 +60,10 @@ void StateMachine::_onEnter(State s) {
     case State::AUTHORIZED:  Buzzer::beep(2,150);      break;
     case State::RECEIPT:     Buzzer::melody_success(); Led::btn().breathe(500); break;
     case State::DOOR_ALERT:  Buzzer::continuous(true); break;
-    case State::ABORTED:     Buzzer::beep(3,200);      break;
+    case State::ABORTED:     
+      Buzzer::beep(3,200);      
+      UsbBridge::instance().sendEvent("DELIVERY_ABORTED", _ctx);
+      break;
     case State::WAITING_PASS: Led::btn().blink(100); Buzzer::beep(1, 50); break;
     case State::LOCKOUT_KEYPAD: Led::btn().blink(1000); Buzzer::beep(3, 300); break;
     default: break;
@@ -208,15 +211,13 @@ void StateMachine::_handleIdle(const PhysicalState& w) {
   }
   // Loitering: mmWave detecta presença prolongada sem autorização
   if (w.person_present && ConfigManager::instance().cfg.enable_loitering_alarm) {
-    static uint32_t loiter_start = 0;
-    if (loiter_start == 0) loiter_start = millis();
-    if (millis() - loiter_start >= ConfigManager::instance().cfg.loitering_alert_ms) {
+    if (_ctx.loiter_start == 0) _ctx.loiter_start = millis();
+    if (millis() - _ctx.loiter_start >= ConfigManager::instance().cfg.loitering_alert_ms) {
       UsbBridge::instance().sendAlert("SUSPICIOUS_LOITERING", _ctx);
-      loiter_start = 0;
+      _ctx.loiter_start = 0;
     }
   } else {
-    static uint32_t loiter_start = 0;
-    loiter_start = 0;
+    _ctx.loiter_start = 0;
   }
 }
 
@@ -431,9 +432,10 @@ void StateMachine::_handleReceipt(const PhysicalState& w) {
 
 void StateMachine::_handleAborted(const PhysicalState& w) {
   (void)w;
-  UsbBridge::instance().sendEvent("DELIVERY_ABORTED", _ctx);
-  vTaskDelay(pdMS_TO_TICKS(3000));
-  transition(State::IDLE);
+  // Aguarda 3s de forma não-bloqueante
+  if (millis() - _ctx.state_enter >= 3000) {
+    transition(State::IDLE);
+  }
 }
 
 void StateMachine::_handleDoorAlert(const PhysicalState& w) {
@@ -476,8 +478,8 @@ void StateMachine::_handleResidentP2(const PhysicalState& w) {
 
   // Delay concluído: abre P2 se habilitada
   if (cfg.enable_strike_p2) {
-    // Verifica interbloqueio P1 uma última vez
-    if (!w.p1_open && w.ina_p1_ma < cfg.ina_strike_min_ma) {
+    // Interbloqueio: P1 física fechada é suficiente
+    if (!w.p1_open) {
       Strike::P2().open(cfg.p2_open_ms);
       Buzzer::beep(1, 200);
       Led::btn().solid(255);
