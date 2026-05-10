@@ -4,3 +4,7 @@
 .DS_Store
 host/.DS_Store
 host/ui/.DS_Store
+cloud_backend/node_modules/
+node_modules/
+*.docx
+*.png
