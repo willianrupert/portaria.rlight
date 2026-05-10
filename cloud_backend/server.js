@@ -63,21 +63,34 @@ app.get('/api/history', (req, res) => {
 });
 
 // ── API: Verify JWT ───────────────────────────────────────────────────────
+const JWT_PREV_SECRET = process.env.JWT_PREV_SECRET || 'rlight_v6_base_secret_old';
+
 app.post('/api/verify', (req, res) => {
     const { jwt } = req.body;
     if (!jwt) return res.status(400).json({ valid: false, error: 'Token ausente' });
+    
     try {
         const parts = jwt.split('.');
-        if (parts.length !== 3) throw new Error('Formato inválido');
+        if (parts.length !== 3) throw new Error('Formato JWT inválido');
         const [h, p, sig] = parts;
-        const hmac = crypto.createHmac('sha256', JWT_SECRET);
-        hmac.update(`${h}.${p}`);
-        let calc = hmac.digest('base64')
-            .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-        if (calc !== sig) return res.json({ valid: false, error: 'Assinatura inválida' });
-        const payload = JSON.parse(Buffer.from(p, 'base64url').toString('utf-8'));
-        res.json({ valid: true, data: payload });
+        
+        const verify = (secret) => {
+            const hmac = crypto.createHmac('sha256', secret);
+            hmac.update(`${h}.${p}`);
+            return hmac.digest('base64')
+                .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'') === sig;
+        };
+
+        if (verify(JWT_SECRET) || verify(JWT_PREV_SECRET)) {
+            const payload = JSON.parse(Buffer.from(p, 'base64url').toString('utf-8'));
+            console.log(`[Verify] JWT Válido: ${payload.jti} (${payload.carrier})`);
+            return res.json({ valid: true, data: payload });
+        } else {
+            console.warn(`[Verify] Assinatura Inválida para token`);
+            return res.json({ valid: false, error: 'Assinatura inválida' });
+        }
     } catch(e) {
+        console.error(`[Verify] Erro:`, e.message);
         res.json({ valid: false, error: e.message });
     }
 });
