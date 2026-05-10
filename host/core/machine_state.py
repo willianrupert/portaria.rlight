@@ -15,14 +15,22 @@ class MachineState:
         self._p1_open = False
         self._p2_open = False
         self._gate_open = False
+        self._int_button_pressed = False
+        self._score = 100
         
         self._lock = threading.Lock()
         self._listeners = []
+        self._event_listeners = []
 
     def subscribe(self, callback):
         """Registra callback que será chamado em variações de estado."""
         with self._lock:
             self._listeners.append(callback)
+
+    def subscribe_event(self, callback):
+        """Registra callback que será chamado para eventos pontuais (ex: KEY_PRESSED)."""
+        with self._lock:
+            self._event_listeners.append(callback)
 
     def update_from_payload(self, payload: dict):
         """Atualiza a FSM interna baseada em dados USB e notifica listeners se houve alteração no state principal."""
@@ -53,9 +61,16 @@ class MachineState:
                 self._p2_open = payload["p2_open"]
             if "gate_open" in payload:
                 self._gate_open = payload["gate_open"]
+            if "int_button_pressed" in payload:
+                self._int_button_pressed = payload["int_button_pressed"]
+            if "score" in payload:
+                self._score = payload["score"]
 
         if changed:
             self._notify_listeners()
+        
+        if "type" in payload and payload["type"] == "EVENT":
+            self._notify_event(payload.get("event", "UNKNOWN"))
 
     def _notify_listeners(self):
         # Dispara fora do lock principal para não prender a thread Serial
@@ -66,6 +81,13 @@ class MachineState:
                 cb(state, last)
             except Exception as e:
                 print(f"[FSM Error] Listener exception: {e}")
+
+    def _notify_event(self, event_name):
+        for cb in self._event_listeners:
+            try:
+                cb(event_name)
+            except Exception as e:
+                print(f"[Event Error] Listener exception: {e}")
 
     def get_state(self):
         with self._lock:
@@ -102,6 +124,14 @@ class MachineState:
     def get_gate_open(self):
         with self._lock:
             return self._gate_open
+
+    def get_int_button_pressed(self):
+        with self._lock:
+            return self._int_button_pressed
+
+    def get_score(self):
+        with self._lock:
+            return self._score
 
 # Instância Singleton global para o host
 host_fsm = MachineState()
