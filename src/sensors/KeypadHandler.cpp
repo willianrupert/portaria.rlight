@@ -7,7 +7,7 @@ KeypadHandler& KeypadHandler::instance() { static KeypadHandler i; return i; }
 
 void KeypadHandler::init(uint8_t address) {
     _addr = address;
-    Wire.begin(); // ESP32-S3 default SDA/SCL (8/9 ou 41/42 dependendo da config)
+    Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
 }
 
 char KeypadHandler::getChar() {
@@ -58,26 +58,30 @@ void KeypadHandler::update() {
 
     if (c == '#') {
         // Fim da senha
-        _final_code = _current_code;
-        _current_code = "";
+        strlcpy(_final_code, _current_code, sizeof(_final_code));
+        _current_code[0] = '\0';
     } else if (c == '*') {
         // Limpa buffer
-        _current_code = "";
+        _current_code[0] = '\0';
     } else {
         // Adiciona dígito se não estourar 16 chars
-        if (_current_code.length() < 16) {
-            _current_code += c;
+        size_t len = strlen(_current_code);
+        if (len < 16) {
+            _current_code[len] = c;
+            _current_code[len + 1] = '\0';
             UsbBridge::instance().sendEvent("KEY_PRESSED", StateMachine::instance().ctx());
         }
     }
 }
 
-String KeypadHandler::getCode() {
-    String res = _final_code;
-    _final_code = "";
-    return res;
+const char* KeypadHandler::getCode() {
+    if (_final_code[0] == '\0') return NULL;
+    static char buf[17];
+    strlcpy(buf, _final_code, sizeof(buf));
+    _final_code[0] = '\0'; // Consome o código
+    return buf;
 }
 
 int KeypadHandler::getPendingLength() {
-    return _current_code.length();
+    return strlen(_current_code);
 }
