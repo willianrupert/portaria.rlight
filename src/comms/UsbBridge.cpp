@@ -75,23 +75,23 @@ void UsbBridge::_dispatch(const char* raw) {
       }
     }
   }
-  else if (!strcmp(cmd, "CMD_ADD_WIEGAND_CODE")) {
+  else if (!strcmp(cmd, "CMD_ADD_KEY_CODE")) {
     char code[24];
     snprintf(code, sizeof(code), "%s", doc["code"] | "");
     const char* tl = doc["type_label"] | "RESIDENT:Morador";
     bool ok = AccessController::instance().addCode(code, tl);
-    if(ok) sendEvent("WIEGAND_CODE_ADDED", fsm.ctx());
+    if(ok) sendEvent("KEY_CODE_ADDED", fsm.ctx());
   }
-  else if (!strcmp(cmd, "CMD_REMOVE_WIEGAND_CODE")) {
+  else if (!strcmp(cmd, "CMD_REMOVE_KEY_CODE")) {
     char code[24];
     snprintf(code, sizeof(code), "%s", doc["code"] | "");
     bool ok = AccessController::instance().removeCode(code);
-    if(ok) sendEvent("WIEGAND_CODE_REMOVED", fsm.ctx());
+    if(ok) sendEvent("KEY_CODE_REMOVED", fsm.ctx());
   }
-  else if (!strcmp(cmd, "CMD_LIST_WIEGAND_CODES")) {
+  else if (!strcmp(cmd, "CMD_LIST_KEY_CODES")) {
     char buf[512];
     AccessController::instance().listCodes(buf, sizeof(buf));
-    sendEvent("WIEGAND_CODE_LIST", fsm.ctx());
+    sendEvent("KEY_CODE_LIST", fsm.ctx());
   }
   else if (!strcmp(cmd, "CMD_UNLOCK_P1")) {
     fsm.transition(State::AUTHORIZED);

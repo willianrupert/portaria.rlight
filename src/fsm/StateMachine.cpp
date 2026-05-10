@@ -22,6 +22,7 @@ void StateMachine::transition(State next) {
   _onExit(_ctx.state);
   _ctx.state       = next;
   _ctx.state_enter = millis();
+  _ctx.ina_checked = false; // Segurança: garante reset em qualquer transição
   _onEnter(next);
   UsbBridge::instance().sendState(next, _ctx);
 }
@@ -57,7 +58,10 @@ void StateMachine::_onEnter(State s) {
     case State::MAINTENANCE: Led::btn().blink(1000);   Buzzer::beep(5,100); break;
     case State::AWAKE:       Led::btn().solid(255);    Buzzer::beep(1,100); break;
     case State::WAITING_QR:  Led::qr().solid(200);     Led::btn().blink(300); break;
-    case State::AUTHORIZED:  Buzzer::beep(2,150);      break;
+    case State::AUTHORIZED:  
+      Buzzer::beep(2,150);      
+      _ctx.ina_checked = false; // v8: Reset para validação de corrente
+      break;
     case State::RECEIPT:     Buzzer::melody_success(); Led::btn().breathe(500); break;
     case State::DOOR_ALERT:  Buzzer::continuous(true); break;
     case State::ABORTED:     
@@ -110,7 +114,7 @@ void StateMachine::tick(const PhysicalState& world) {
     return;
   }
 
-  // WIEGAND: processado em qualquer estado exceto durante entrega ativa
+  // TECLADO I2C (PCF8574): processado em qualquer estado exceto durante entrega ativa
   bool delivery_active = (_ctx.state == State::WAITING_QR  ||
                           _ctx.state == State::AUTHORIZED   ||
                           _ctx.state == State::INSIDE_WAIT  ||
@@ -195,10 +199,12 @@ void StateMachine::tick(const PhysicalState& world) {
 // ── HANDLERS ────────────────────────────────────────────────────────
 
 void StateMachine::_handleIdle(const PhysicalState& w) {
-  // Botão inicia fluxo de entrega
+  // Botão inicia fluxo de entrega (debounce não-bloqueante v8)
   if (digitalRead(PIN_BUTTON) == LOW) {
-    delay(50);   // debounce simples — não é ISR
-    if (digitalRead(PIN_BUTTON) == LOW) { transition(State::AWAKE); return; }
+    if (_ctx.btn_debounce_ms == 0) _ctx.btn_debounce_ms = millis();
+    if (millis() - _ctx.btn_debounce_ms > 50) { transition(State::AWAKE); return; }
+  } else {
+    _ctx.btn_debounce_ms = 0;
   }
 
   // Botão Interno P2 (v8): Liberação imediata para saída do morador
@@ -257,22 +263,27 @@ void StateMachine::_handleWaitingQr(const PhysicalState& w) {
 void StateMachine::_handleAuthorized(const PhysicalState& w) {
   auto& cfg = ConfigManager::instance().cfg;
 
-  // Inicia strike na primeira entrada
+  // Inicia strike na primeira entrada (v8: split não-bloqueante)
   if (_ctx.authorized_at == 0) {
-    // Interbloqueio P2 opcional: se P2 tiver atuador futuramente
     if (cfg.enable_strike_p2 && w.p2_open) {
       UsbBridge::instance().sendAlert("INTERLOCK_P2_OPEN", _ctx);
       transition(State::ERROR); return;
     }
     Strike::P1().open(cfg.door_open_ms);
-    // Valida corrente do strike via INA219
-    vTaskDelay(pdMS_TO_TICKS(200));   // aguarda rampa de corrente
+    _ctx.authorized_at = millis();
+    return;
+  }
+
+  // Sub-fase: Aguarda rampa de corrente (200ms) sem bloquear Core 0
+  if (millis() - _ctx.authorized_at < 200) return;
+
+  // Sub-fase: Valida corrente via INA219 (uma única vez)
+  if (!_ctx.ina_checked) {
+    _ctx.ina_checked = true;
     if (w.ina_p1_ma < cfg.ina_strike_min_ma) {
       UsbBridge::instance().sendAlert("STRIKE_P1_FAIL", _ctx);
       transition(State::ERROR); return;
     }
-    _ctx.authorized_at = millis();
-    return;
   }
 
   // P1 abriu: destino depende se é entrega normal ou reversa
@@ -549,9 +560,9 @@ void StateMachine::_handleWaitingPass(const PhysicalState& w) {
     return;
   }
 
-  String code = KeypadHandler::instance().getCode();
-  if (code.length() > 0) {
-    AccessResult res = AccessController::instance().validate(code.c_str());
+  const char* code = KeypadHandler::instance().getCode();
+  if (code != nullptr && strlen(code) > 0) {
+    AccessResult res = AccessController::instance().validate(code);
     
     if (res.type == AccessType::NONE) {
       _ctx.keypad_fails++;

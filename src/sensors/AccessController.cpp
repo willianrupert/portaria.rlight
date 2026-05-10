@@ -5,6 +5,8 @@
 #include <string.h>
 
 #include "mbedtls/sha256.h"
+#include "nvs_flash.h"
+#include "nvs.h"
 
 AccessController& AccessController::instance() { static AccessController i; return i; }
 
@@ -141,8 +143,39 @@ bool AccessController::removeCode(const char* code) {
 }
 
 void AccessController::listCodes(char* out_buf, size_t buf_sz) {
-  // O NVS Preferences da ESP32 não possui método direto "listar keys" nativo na API simplificada
-  // da framework Arduino. Precisaríamos usar nvs_entry_find de nvs_flash.h.
-  // Como simplificação via string JSON temporária sem lotar a IRAM com blobs:
-  strlcpy(out_buf, "{\"error\": \"Function requires nvs_entry_find (lower level ESP-IDF) or specific HA template indexing\"}", buf_sz);
+  nvs_iterator_t it = nvs_entry_find("nvs", "access_db", NVS_TYPE_ANY);
+  if (it == NULL) {
+    strlcpy(out_buf, "[]", buf_sz);
+    return;
+  }
+  
+  strlcpy(out_buf, "[", buf_sz);
+  bool first = true;
+  
+  while (it != NULL) {
+    nvs_entry_info_t info;
+    nvs_entry_info(it, &info);
+    
+    // Recupera o valor para esta key
+    Preferences p;
+    p.begin("access_db", true);
+    char val[48] = "";
+    p.getString(info.key, val, sizeof(val));
+    p.end();
+
+    char entry[128];
+    snprintf(entry, sizeof(entry), "%s{\"key\":\"%s\",\"val\":\"%s\"}", 
+             first ? "" : ",", info.key, val);
+    
+    if (strlen(out_buf) + strlen(entry) < buf_sz - 2) {
+      strlcat(out_buf, entry, buf_sz);
+      first = false;
+    } else {
+      break; // Buffer cheio
+    }
+    
+    it = nvs_entry_next(it);
+  }
+  strlcat(out_buf, "]", buf_sz);
+  nvs_release_iterator(it);
 }

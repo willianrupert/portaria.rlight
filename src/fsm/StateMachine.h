@@ -63,6 +63,10 @@ struct FsmContext {
   uint32_t lockout_until      = 0;   // tempo de desbloqueio (v8)
   uint32_t prev_duration_ms   = 0;   // duração do estado anterior (substitui millis_at_sync em transição)
   uint32_t loiter_start       = 0;   // para controle de timeout em IDLE (S1)
+  
+  // v8: Controle de estados não-bloqueantes
+  bool     ina_checked        = false; 
+  uint32_t btn_debounce_ms    = 0;
 };
 
 class StateMachine {

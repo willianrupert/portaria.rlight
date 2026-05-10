@@ -1,6 +1,9 @@
 import time
 import uuid
 import os
+import base64
+import json
+import shutil
 from core.config import config, dynamic_texts
 from core.machine_state import host_fsm
 from core.serial_bridge import esp32_bridge
@@ -67,9 +70,30 @@ def on_state_transition(new_state, old_state):
         weight_g = host_fsm.get_weight()
         
         if jwt_token:
-            # Extrai os primeiros 8 caracteres do JWT ou usa como ID
-            token_uuid = jwt_token[-8:] if len(jwt_token) > 8 else str(uuid.uuid4())[:8]
-            photo_url = webcam.capture_snapshot(token_uuid) or ""
+            # v8: Extrai token_uuid real do payload JWT (sem verificação de assinatura no host)
+            try:
+                parts = jwt_token.split('.')
+                if len(parts) >= 2:
+                    # Adiciona padding Base64 se necessário
+                    payload_raw = parts[1]
+                    payload_raw += '=' * (-len(payload_raw) % 4)
+                    payload = json.loads(base64.b64decode(payload_raw))
+                    token_uuid = payload.get('jti') or payload.get('token') or str(uuid.uuid4())[:8]
+                else:
+                    token_uuid = str(uuid.uuid4())[:8]
+            except Exception as e:
+                print(f"[Error] Falha ao decodificar JWT: {e}")
+                token_uuid = str(uuid.uuid4())[:8]
+
+            # Renomeia a captura temporária para o nome final
+            temp_path = "/tmp/rlight_photos/temp_last.jpg"
+            final_path = f"/tmp/rlight_photos/{token_uuid}.jpg"
+            if os.path.exists(temp_path):
+                shutil.move(temp_path, final_path)
+                photo_url = final_path
+            else:
+                # Fallback caso a captura direta tenha falhado
+                photo_url = webcam.capture_snapshot(token_uuid) or ""
                 
             print(f"[Sync] Enfileirando entrega {token_uuid} no SQLite local.")
             db_manager.insert_delivery(

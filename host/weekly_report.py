@@ -3,6 +3,9 @@ import smtplib
 import os
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+
+load_dotenv() # v8: Carrega variáveis do arquivo .env
 
 DB_PATH = "/var/lib/rlight/deliveries.db"
 
@@ -41,11 +44,11 @@ Por transportadora:
         return f"Erro ao gerar relatório: {e}"
 
 def send_email(body):
-    smtp_server = os.getenv("SMTP_SERVER")
+    smtp_server = os.getenv("SMTP_HOST")
     smtp_port   = int(os.getenv("SMTP_PORT", "587"))
     smtp_user   = os.getenv("SMTP_USER")
     smtp_pass   = os.getenv("SMTP_PASS")
-    dest_email  = os.getenv("DEST_EMAIL")
+    dest_email  = os.getenv("SMTP_TO")
 
     if not all([smtp_server, smtp_user, smtp_pass, dest_email]):
         print("[Weekly Report] SMTP não configurado. E-mail simulado:")

@@ -4,7 +4,7 @@ import os
 import sys
 
 FIRMWARE_PATH = os.path.join(os.path.dirname(__file__), 'firmware.bin')
-DEVICE_PATH = "/dev/ttyACM0"  # Adaptar se for via udev rules para /dev/rlight_esp
+DEVICE_PATH = "/dev/rlight_esp"
 
 def check_and_update(current_version: str, local_version: str):
     if current_version == local_version:

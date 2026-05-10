@@ -24,6 +24,8 @@ const app = initializeApp(cfg);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 let deliveries = [];
+let keypadAsterisks = 0;
+let lockoutTimer = null;
 
 // ── Utilities ──────────────────────────────────────
 function show(id) {
@@ -34,6 +36,83 @@ function err(msg) { document.getElementById('err').textContent = msg || ''; }
 
 // Expose for inline onclick
 window._resetAuth = () => { sessionStorage.clear(); location.reload(); };
+
+// ── WebSocket (Host OPi) ───────────────────────────
+const socket = new WebSocket('ws://' + location.hostname + ':3006');
+
+socket.onmessage = (event) => {
+  try {
+    const data = JSON.parse(event.data);
+    handleMessage(data);
+  } catch (e) { console.error('WS parse error:', e); }
+};
+
+function handleMessage(data) {
+  if (data.type === 'state_change') {
+    const state = data.state;
+    const statesDict = {
+      'IDLE': 'Aguardando...',
+      'AWAKE': 'Iniciando...',
+      'WAITING_QR': 'Aguardando QR Code',
+      'WAITING_PASS': 'Verificando Acesso',
+      'LOCKOUT_KEYPAD': '⚠ Teclado Bloqueado',
+      'AUTHORIZED': 'Acesso Autorizado',
+      'INSIDE_WAIT': 'Pode entrar',
+      'DELIVERING': 'Depositando...',
+      'DOOR_REOPENED': 'Pode sair',
+      'CONFIRMING': 'Confirmando...',
+      'RECEIPT': 'Comprovante',
+      'ABORTED': 'Entrega Cancelada',
+      'ERROR': 'Erro no Sistema',
+      'RESIDENT_P1': 'Bem-vindo!',
+      'RESIDENT_P2': 'Saindo...',
+      'REVERSE_PICKUP': 'Coleta Reversa'
+    };
+    
+    const label = statesDict[state] || state;
+    // Se estiver em uma tela de 'view-' (PWA Admin), não forçamos a mudança de tela do Kiosk
+    // exceto se for um estado crítico ou se o usuário quiser.
+    // Mas para o Kiosk (localhost), trocamos a tela:
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+       if (state === 'WAITING_PASS') {
+         keypadAsterisks = 0;
+         document.getElementById('keypad-dots').innerHTML = '';
+       }
+       if (state === 'LOCKOUT_KEYPAD') startLockoutCountdown(600); // 10 min default
+       show(state);
+    }
+  } 
+  else if (data.type === 'KEY_PRESSED') {
+    handleKeyPressed();
+  }
+}
+
+function handleKeyPressed() {
+  keypadAsterisks++;
+  const container = document.getElementById('keypad-dots');
+  if (container) {
+    container.innerHTML = '';
+    for(let i=0; i<keypadAsterisks; i++) {
+      container.innerHTML += '<div style="width:20px;height:20px;background:var(--blue);border-radius:50%;"></div>';
+    }
+  }
+}
+
+function startLockoutCountdown(seconds) {
+  if (lockoutTimer) clearInterval(lockoutTimer);
+  let remaining = seconds;
+  const el = document.getElementById('lockout-countdown');
+  lockoutTimer = setInterval(() => {
+    remaining--;
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
+    if (el) el.textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+    if (remaining <= 0) {
+      clearInterval(lockoutTimer);
+      location.reload();
+    }
+  }, 1000);
+}
 
 // ── Navigation ─────────────────────────────────────
 document.getElementById('btn-settings').onclick  = () => show('settings');
