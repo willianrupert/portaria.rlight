@@ -45,7 +45,10 @@ Por transportadora:
 
 def send_email(body):
     smtp_server = os.getenv("SMTP_HOST")
-    smtp_port   = int(os.getenv("SMTP_PORT", "587"))
+    try:
+        smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    except (TypeError, ValueError):
+        smtp_port = 587
     smtp_user   = os.getenv("SMTP_USER")
     smtp_pass   = os.getenv("SMTP_PASS")
     dest_email  = os.getenv("SMTP_TO")
