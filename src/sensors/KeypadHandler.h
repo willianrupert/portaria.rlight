@@ -19,8 +19,9 @@ public:
     // Loop interno para processar senhas e retornar códigos completos (ex: 1234#)
     void update();
     
-    // Retorna código completo se finalizado com #, ou string vazia.
-    String getCode();
+    // Retorna código completo se finalizado com #, ou NULL.
+    // O chamador deve consumir o código (ele será limpo após a chamada).
+    const char* getCode(); 
 
     // Retorna a quantidade de dígitos já digitados no buffer parcial
     int getPendingLength();
@@ -29,8 +30,8 @@ private:
     uint8_t _addr;
     uint32_t _last_scan = 0;
     char _last_key = 0;
-    String _current_code = "";
-    String _final_code = "";
+    char _current_code[17] = "";
+    char _final_code[17] = "";
     
     const char _keys[4][3] = {
         {'1','2','3'},
