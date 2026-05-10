@@ -1,0 +1,17 @@
+[Unit]
+Description=RLight Portaria v8 Cloud Backend
+After=network.target
+
+[Service]
+Type=simple
+User=willian
+WorkingDirectory=/opt/rlight/cloud_backend
+Environment=PORT=3005
+Environment=JWT_SECRET=rlight_v8_secure_token_secret
+Environment=JWT_PREV_SECRET=rlight_v6_base_secret
+ExecStart=/usr/bin/node /opt/rlight/cloud_backend/server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
