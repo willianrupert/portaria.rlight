@@ -1698,6 +1698,53 @@
       border-color: rgba(10, 132, 255, 0.7)
     }
 
+    /* ═══════════════════════ 17 — WAITING_PASS ═══════════════════════ */
+    .pass-dots {
+      display: flex;
+      gap: 16px;
+      margin-top: 36px;
+    }
+    .pass-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid var(--border-strong);
+      background: transparent;
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .pass-dot.active {
+      background: var(--blue);
+      border-color: var(--blue);
+      box-shadow: 0 0 15px rgba(10, 132, 255, 0.4);
+      transform: scale(1.15);
+    }
+    .pass-hint {
+      margin-top: 42px;
+      font-size: 14px;
+      color: var(--t3);
+      text-align: center;
+    }
+
+    /* ═══════════════════════ 18 — LOCKOUT_KEYPAD ═══════════════════════ */
+    .lockout-card {
+      padding: 42px;
+      text-align: center;
+      border-color: rgba(255, 69, 58, 0.3);
+      background: rgba(255, 69, 58, 0.05);
+      animation: pulse-lockout 2s infinite alternate;
+    }
+    @keyframes pulse-lockout {
+      from { border-color: rgba(255, 69, 58, 0.3); }
+      to { border-color: rgba(255, 69, 58, 0.6); box-shadow: 0 0 40px rgba(255, 69, 58, 0.15); }
+    }
+    .lockout-timer {
+      font-size: 64px;
+      font-weight: 200;
+      color: var(--red);
+      font-variant-numeric: tabular-nums;
+      margin: 18px 0;
+    }
+
     .tc {
       text-align: center
     }
@@ -2068,6 +2115,33 @@
           99616-2408</strong></div>
     </section>
 
+    <!-- 17 · WAITING_PASS -->
+    <section class="screen" id="s-WAITING_PASS">
+      <div style="font-size:64px; margin-bottom: 20px;">⌨</div>
+      <div class="awake-main-title">INSIRA SUA SENHA</div>
+      <div class="awake-sub">Use o teclado numérico para digitar seu código de morador</div>
+      <div class="pass-dots" id="pass-dots">
+        <div class="pass-dot"></div>
+        <div class="pass-dot"></div>
+        <div class="pass-dot"></div>
+        <div class="pass-dot"></div>
+        <div class="pass-dot"></div>
+        <div class="pass-dot"></div>
+      </div>
+      <div class="pass-hint">Pressione <b>#</b> para confirmar ou <b>*</b> para limpar</div>
+    </section>
+
+    <!-- 18 · LOCKOUT_KEYPAD -->
+    <section class="screen" id="s-LOCKOUT_KEYPAD">
+      <div class="glass-card lockout-card">
+        <div style="font-size:48px; color: var(--red); margin-bottom: 16px;">🛑</div>
+        <div class="awake-main-title" style="color: var(--red)">TECLADO BLOQUEADO</div>
+        <div class="awake-sub">Muitas tentativas incorretas detectadas</div>
+        <div class="lockout-timer" id="lockout-timer">05:00</div>
+        <div class="awake-sub">Aguarde o tempo expirar para tentar novamente</div>
+      </div>
+    </section>
+
   </div><!-- /app -->
 
   <!-- FALLBACK POPUP -->
@@ -2085,7 +2159,8 @@
   <div id="nav">
     <button class="nav-btn" data-s="IDLE">IDLE</button>
     <button class="nav-btn" data-s="AWAKE">AWAKE</button>
-    <button class="nav-btn" data-s="WAITING_QR">QR</button>
+    <button class="nav-btn" data-s="WAITING_PASS">PASS</button>
+    <button class="nav-btn" data-s="LOCKOUT_KEYPAD">LOCKOUT</button>
     <button class="nav-btn" data-s="AUTHORIZED">AUTH</button>
     <button class="nav-btn" data-s="INSIDE_WAIT">INSIDE</button>
     <button class="nav-btn" data-s="DELIVERING">DELIV</button>
@@ -2127,6 +2202,8 @@
       CONFIRMING: 'Gerando Comprovante',
       RECEIPT: 'Comprovante',
       ABORTED: 'Ciclo Encerrado',
+      WAITING_PASS: 'Aguardando Senha',
+      LOCKOUT_KEYPAD: 'Teclado Bloqueado',
       RESIDENT_P1: 'Morador — P1',
       RESIDENT_P2: 'Morador — P2',
       REVERSE_PICKUP: 'Coleta Reversa',
@@ -2382,7 +2459,47 @@
       }
     });
 
+    // ─── WEBSOCKET ───────────────────────────────────────────
+    let ws = null;
+    function connectWS() {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${proto}//${location.host}/ui/stream`);
+      ws.onopen = () => { setOnlineStatus(true); console.log('[WS] Conectado'); };
+      ws.onclose = () => { setOnlineStatus(false); setTimeout(connectWS, 2000); };
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'state_change') {
+          if (msg.carrier) document.getElementById('auth-carrier').textContent = 'via ' + msg.carrier;
+          goto(msg.state);
+        } else if (msg.type === 'telemetry_update') {
+          updateTelemetry(msg);
+        } else if (msg.type === 'KEY_PRESSED') {
+          handleKeyPress();
+        }
+      };
+    }
+
+    function updateTelemetry(msg) {
+      if (currentState === 'INSIDE_WAIT') {
+        const w = msg.weight_g || 0;
+        document.getElementById('inside-weight').textContent = (w/1000).toFixed(2) + ' kg';
+        document.getElementById('inside-wbar').style.width = Math.min(100, (w/2000)*100) + '%';
+      }
+      if (currentState === 'DELIVERING') {
+        document.getElementById('deliv-weight').textContent = ((msg.weight_g || 0)/1000).toFixed(2) + ' kg';
+      }
+    }
+
+    let keyCount = 0;
+    function handleKeyPress() {
+      keyCount = (keyCount % 6) + 1;
+      const dots = document.querySelectorAll('.pass-dot');
+      dots.forEach((d, i) => d.classList.toggle('active', i < keyCount));
+      // Reset after a while or on state change
+    }
+
     // ─── INIT ─────────────────────────────────────────────────
+    connectWS();
     goto('IDLE');
   </script>
 </body>
