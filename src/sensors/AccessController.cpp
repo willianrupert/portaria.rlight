@@ -69,8 +69,6 @@ void AccessController::resetRateLimit() {
 
 AccessResult AccessController::validate(const char* code) {
   AccessResult result;
-
-  // Rate limiting: bloqueia se em cooldown
   if (!canAttempt()) {
     result.type = AccessType::DENIED;
     strlcpy(result.label, "RATE_LIMITED", sizeof(result.label));
@@ -78,104 +76,109 @@ AccessResult AccessController::validate(const char* code) {
   }
 
   char key[16];
-  buildKey(code, key);
+  snprintf(key, sizeof(key), "c_%s", code);
 
   Preferences p;
-  p.begin("access_db", true); // read-only
-  char val[48] = "";
-  p.getString(key, val, sizeof(val));
+  p.begin("access_db", true);
+  String val = p.getString(key, "");
   p.end();
 
-  if (strlen(val) == 0) {
-    // Código não encontrado
+  if (val.length() == 0) {
     recordFailure();
     result.type = AccessType::NONE;
     return result;
   }
 
-  // Reset rate limit em acesso bem-sucedido
   resetRateLimit();
+  // Formato no NVS: "T:Label" (T: 1=Res, 2=ML, 3=Amazon...)
+  char type_code = val[0];
+  strlcpy(result.label, val.c_str() + 2, sizeof(result.label));
 
-  // Parseia o valor: "TIPO:Label"
-  // ex: "RESIDENT:Willian Rupert" ou "REVERSE_ML:Coleta ML"
-  char type_str[24] = "";
-  char label_str[24] = "";
-  const char* colon = strchr(val, ':');
-  if (colon) {
-    size_t type_len = colon - val;
-    size_t len_to_copy = (type_len < sizeof(type_str) - 1) ? type_len : sizeof(type_str) - 1;
-    strncpy(type_str, val, len_to_copy);
-    type_str[len_to_copy] = '\0';
-    strlcpy(label_str, colon + 1, sizeof(label_str));
-  } else {
-    strlcpy(type_str, val, sizeof(type_str));
-  }
-  strlcpy(result.label, label_str, sizeof(result.label));
-
-  if      (!strcmp(type_str, "RESIDENT"))          result.type = AccessType::RESIDENT;
-  else if (!strcmp(type_str, "REVERSE_CORREIOS"))  result.type = AccessType::REVERSE_CORREIOS;
-  else if (!strcmp(type_str, "REVERSE_ML"))        result.type = AccessType::REVERSE_ML;
-  else if (!strcmp(type_str, "REVERSE_AMAZON"))    result.type = AccessType::REVERSE_AMAZON;
-  else if (!strcmp(type_str, "REVERSE_GENERIC"))   result.type = AccessType::REVERSE_GENERIC;
-  else                                             result.type = AccessType::NONE;
+  if (type_code == '1') result.type = AccessType::RESIDENT;
+  else if (type_code == '2') result.type = AccessType::REVERSE_ML;
+  else if (type_code == '3') result.type = AccessType::REVERSE_AMAZON;
+  else if (type_code == '4') result.type = AccessType::REVERSE_CORREIOS;
+  else result.type = AccessType::REVERSE_GENERIC;
 
   return result;
 }
 
 bool AccessController::addCode(const char* code, const char* type_label) {
   char key[16];
-  buildKey(code, key);
+  snprintf(key, sizeof(key), "c_%s", code);
+  
   Preferences p;
   p.begin("access_db", false);
-  size_t written = p.putString(key, type_label);
+  p.putString(key, type_label);
+  
+  // Atualiza índice CSV
+  String index = p.getString("index", "");
+  if (index.indexOf(code) == -1) {
+    if (index.length() > 0) index += ",";
+    index += code;
+    p.putString("index", index);
+  }
   p.end();
-  return written > 0;
+  return true;
 }
 
 bool AccessController::removeCode(const char* code) {
   char key[16];
-  buildKey(code, key);
+  snprintf(key, sizeof(key), "c_%s", code);
+  
   Preferences p;
   p.begin("access_db", false);
-  bool ok = p.remove(key);
+  p.remove(key);
+  
+  // Remove do índice
+  String index = p.getString("index", "");
+  int pos = index.indexOf(code);
+  if (pos != -1) {
+    int end = pos + strlen(code);
+    if (index[end] == ',') end++;
+    else if (pos > 0 && index[pos-1] == ',') pos--;
+    index.remove(pos, end - pos);
+    p.putString("index", index);
+  }
   p.end();
-  return ok;
+  return true;
 }
 
 void AccessController::listCodes(char* out_buf, size_t buf_sz) {
-  nvs_iterator_t it = nvs_entry_find("nvs", "access_db", NVS_TYPE_ANY);
-  if (it == NULL) {
-    strlcpy(out_buf, "[]", buf_sz);
+  Preferences p;
+  p.begin("access_db", true);
+  String index = p.getString("index", "");
+  p.end();
+
+  strlcpy(out_buf, "[", buf_sz);
+  if (index.length() == 0) {
+    strlcat(out_buf, "]", buf_sz);
     return;
   }
-  
-  strlcpy(out_buf, "[", buf_sz);
+
+  char temp[index.length() + 1];
+  strcpy(temp, index.c_str());
+  char* token = strtok(temp, ",");
   bool first = true;
-  
-  while (it != NULL) {
-    nvs_entry_info_t info;
-    nvs_entry_info(it, &info);
+
+  while (token != NULL) {
+    char key[16];
+    snprintf(key, sizeof(key), "c_%s", token);
     
-    // Recupera o valor para esta key
-    Preferences p;
     p.begin("access_db", true);
-    char val[48] = "";
-    p.getString(info.key, val, sizeof(val));
+    String val = p.getString(key, "");
     p.end();
 
-    char entry[128];
-    snprintf(entry, sizeof(entry), "%s{\"key\":\"%s\",\"val\":\"%s\"}", 
-             first ? "" : ",", info.key, val);
-    
-    if (strlen(out_buf) + strlen(entry) < buf_sz - 2) {
-      strlcat(out_buf, entry, buf_sz);
-      first = false;
-    } else {
-      break; // Buffer cheio
+    if (val.length() > 0) {
+      char entry[128];
+      snprintf(entry, sizeof(entry), "%s{\"token\":\"%s\",\"type\":\"%c\",\"label\":\"%s\"}",
+               first ? "" : ",", token, val[0], val.c_str() + 2);
+      if (strlen(out_buf) + strlen(entry) < buf_sz - 2) {
+        strlcat(out_buf, entry, buf_sz);
+        first = false;
+      }
     }
-    
-    it = nvs_entry_next(it);
+    token = strtok(NULL, ",");
   }
   strlcat(out_buf, "]", buf_sz);
-  nvs_release_iterator(it);
 }

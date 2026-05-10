@@ -22,7 +22,8 @@ void StateMachine::transition(State next) {
   _onExit(_ctx.state);
   _ctx.state       = next;
   _ctx.state_enter = millis();
-  _ctx.ina_checked = false; // Segurança: garante reset em qualquer transição
+  _ctx.ina_checked = false; 
+  _ctx.p2_opened   = false;
   _onEnter(next);
   UsbBridge::instance().sendState(next, _ctx);
 }
@@ -476,7 +477,6 @@ void StateMachine::_handleResidentP1(const PhysicalState& w) {
 void StateMachine::_handleResidentP2(const PhysicalState& w) {
   auto& cfg = ConfigManager::instance().cfg;
 
-  // Interbloqueio: P1 voltou a abrir durante o delay? Aborta.
   if (w.p1_open) {
     UsbBridge::instance().sendAlert("RESIDENT_P1_REOPENED_BEFORE_P2", _ctx);
     _ctx.resident_p2_timer = 0;
@@ -484,30 +484,24 @@ void StateMachine::_handleResidentP2(const PhysicalState& w) {
     return;
   }
 
-  // Aguarda o delay de segurança (padrão 2000ms) antes de abrir P2
   if (millis() - _ctx.resident_p2_timer < cfg.p2_delay_ms) return;
 
-  // Delay concluído: abre P2 se habilitada
-  if (cfg.enable_strike_p2) {
-    // Interbloqueio: P1 física fechada é suficiente
-    if (!w.p1_open) {
-      Strike::P2().open(cfg.p2_open_ms);
-      Buzzer::beep(1, 200);
-      Led::btn().solid(255);
-    }
+  // Abre P2 uma única vez
+  if (cfg.enable_strike_p2 && !_ctx.p2_opened && !w.p1_open) {
+    Strike::P2().open(cfg.p2_open_ms);
+    Buzzer::beep(1, 200);
+    Led::btn().solid(255);
+    _ctx.p2_opened = true;
   }
 
-  // Aguarda P2 abrir (confirmado pelo micro switch) ou timeout
   if (w.p2_open) {
-    // P2 abriu: loga acesso e retorna ao IDLE
     UsbBridge::instance().sendEvent("RESIDENT_ACCESS_COMPLETE", _ctx);
     _ctx.resident_p2_timer = 0;
     transition(State::IDLE);
     return;
   }
 
-  // P2 não abriu após (door_open_ms + 3s de margem): timeout silencioso
-  if (millis() - _ctx.resident_p2_timer > cfg.door_open_ms + 3000) {
+  if (millis() - _ctx.resident_p2_timer > cfg.p2_open_ms + 3000) {
     UsbBridge::instance().sendAlert("RESIDENT_P2_TIMEOUT", _ctx);
     _ctx.resident_p2_timer = 0;
     transition(State::IDLE);

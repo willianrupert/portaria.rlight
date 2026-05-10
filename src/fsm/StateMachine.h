@@ -67,6 +67,7 @@ struct FsmContext {
   // v8: Controle de estados não-bloqueantes
   bool     ina_checked        = false; 
   uint32_t btn_debounce_ms    = 0;
+  bool     p2_opened          = false;
 };
 
 class StateMachine {

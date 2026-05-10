@@ -93,17 +93,17 @@ void UsbBridge::_dispatch(const char* raw) {
     AccessController::instance().listCodes(buf, sizeof(buf));
     sendEvent("KEY_CODE_LIST", fsm.ctx());
   }
-  else if (!strcmp(cmd, "CMD_UNLOCK_P1")) {
+  else if (!strcmp(cmd, "CMD_UNLOCK_P1") || !strcmp(cmd, "CMD_OPEN_P1")) {
     fsm.transition(State::AUTHORIZED);
   }
-  else if (!strcmp(cmd, "CMD_UNLOCK_P2")) {
+  else if (!strcmp(cmd, "CMD_UNLOCK_P2") || !strcmp(cmd, "CMD_OPEN_P2")) {
     // Apenas se a flag estiver ativada nas configs ou comando expresso for ok.
     if(ConfigManager::instance().cfg.enable_strike_p2) {
       Strike::P2().open(ConfigManager::instance().cfg.p2_open_ms);
       sendEvent("P2_UNLOCKED_REMOTELY", fsm.ctx());
     }
   }
-  else if (!strcmp(cmd, "CMD_UNLOCK_GATE")) {
+  else if (!strcmp(cmd, "CMD_UNLOCK_GATE") || !strcmp(cmd, "CMD_OPEN_GATE")) {
     // Pulso no motor Garen
     Strike::Gate().open(ConfigManager::instance().cfg.gate_relay_ms); // pulse for gate motor
     sendEvent("GATE_PULSE_SENT", fsm.ctx());
