@@ -5,9 +5,9 @@ After=network.target
 [Service]
 Type=simple
 User=willian
-WorkingDirectory=/opt/rlight/cloud_backend
-EnvironmentFile=/opt/rlight/cloud_backend/.env
-ExecStart=/usr/bin/node /opt/rlight/cloud_backend/server.js
+WorkingDirectory=/home/ubuntu/cloud_backend
+EnvironmentFile=/home/ubuntu/cloud_backend/.env
+ExecStart=/usr/bin/node /home/ubuntu/cloud_backend/server.js
 Restart=always
 RestartSec=5
 
