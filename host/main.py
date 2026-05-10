@@ -32,8 +32,12 @@ def broadcast_telemetry():
     """Envia os dados físicos vitais (portão, peso) periodicamente para o frontend."""
     ws_manager.broadcast_sync({
         "type": "telemetry_update",
+        "p1_open": host_fsm.get_p1_open(),
+        "p2_open": host_fsm.get_p2_open(),
         "gate_open": host_fsm.get_gate_open(),
-        "weight_g": host_fsm.get_weight()
+        "int_button": host_fsm.get_int_button_pressed(),
+        "weight_g": host_fsm.get_weight(),
+        "score": host_fsm.get_score()
     })
 
 def on_state_transition(new_state, old_state):
@@ -41,7 +45,8 @@ def on_state_transition(new_state, old_state):
     print(f"[Core FSM] Transição: {old_state} -> {new_state}")
     
     # Gerenciamento de Energia da Tela FÍSICA
-    if new_state in ["IDLE", "MAINTENANCE"]:
+    # WAITING_PASS e LOCKOUT_KEYPAD devem manter a tela ligada
+    if new_state in ["IDLE", "MAINTENANCE", "OUT_OF_HOURS"]:
         display_manager.dpms_control(False)
     else:
         display_manager.dpms_control(True)
@@ -49,9 +54,11 @@ def on_state_transition(new_state, old_state):
     # Lógica de Inicialização Local
     if new_state == "AWAKE":
         esp32_bridge.send_cmd("SCREEN_READY")
-        
-    elif new_state == "CONFIRMING" and old_state != "CONFIRMING":
-        webcam.capture_snapshot()
+    
+    # Captura foto no momento da confirmação ou acesso morador
+    if new_state in ["CONFIRMING", "RESIDENT_P1", "REVERSE_PICKUP"] and old_state != new_state:
+        # Se for morador ou reversa, tentamos capturar a foto imediatamente
+        webcam.capture_snapshot("temp_last")
         
     photo_url = ""
     jwt_token = host_fsm.get_jwt()
@@ -60,8 +67,9 @@ def on_state_transition(new_state, old_state):
         weight_g = host_fsm.get_weight()
         
         if jwt_token:
-            token_uuid = str(uuid.uuid4())[:8]
-            photo_url = webcam.capture_snapshot() or ""
+            # Extrai os primeiros 8 caracteres do JWT ou usa como ID
+            token_uuid = jwt_token[-8:] if len(jwt_token) > 8 else str(uuid.uuid4())[:8]
+            photo_url = webcam.capture_snapshot(token_uuid) or ""
                 
             print(f"[Sync] Enfileirando entrega {token_uuid} no SQLite local.")
             db_manager.insert_delivery(
@@ -69,9 +77,16 @@ def on_state_transition(new_state, old_state):
                 ts=int(time.time()),
                 jwt=jwt_token,
                 weight_g=weight_g,
-                carrier="UNKNOWN", 
+                carrier=host_fsm.get_carrier() or "UNKNOWN", 
                 photo_path=photo_url
             )
+
+    # Envia evento para o Home Assistant se for acesso completo
+    if new_state == "IDLE" and old_state == "RESIDENT_P2":
+        ha_integration.publish_event("RESIDENT_ACCESS_COMPLETE", {
+            "label": host_fsm.get_resident_label(),
+            "ts": int(time.time())
+        })
 
     # Envia evento de mudança de estado para o navegador Kiosk
     ws_manager.broadcast_sync({
@@ -84,9 +99,14 @@ def on_state_transition(new_state, old_state):
         "resident_label": host_fsm.get_resident_label()
     })
 
+def on_event(event_name):
+    """Hook para eventos assíncronos (não transições)."""
+    if event_name == "KEY_PRESSED":
+        ws_manager.broadcast_sync({"type": "KEY_PRESSED"})
+
 def main():
     print("========================================")
-    print(" RLight Portaria Digital v7 - Host OPi  ")
+    print(" RLight Portaria Digital v8 - Host OPi  ")
     print(" Arquitetura Web SPA Kiosk              ")
     print("========================================")
     
@@ -96,6 +116,7 @@ def main():
     ha_integration.start()
     oracle_api.start_sync_worker() 
     host_fsm.subscribe(on_state_transition)
+    host_fsm.subscribe_event(on_event)
     esp32_bridge.start()
     
     running = True
