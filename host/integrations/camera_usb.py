@@ -13,7 +13,7 @@ class WebCamCapture:
         # Garante que a pasta assets existe
         os.makedirs(os.path.dirname(self.last_photo_path), exist_ok=True)
 
-    def capture_snapshot(self) -> str:
+    def capture_snapshot(self, token: str = "last_delivery") -> str:
         """Abre a câmera, tira a foto, salva no disco e retorna o caminho relativo para a UI."""
         with self.lock:
             try:
@@ -29,10 +29,18 @@ class WebCamCapture:
                 cap.release()
 
                 if ret:
+                    photo_name = f"{token}.jpg"
+                    photo_path = os.path.join("/tmp/rlight_photos", photo_name)
+                    os.makedirs("/tmp/rlight_photos", exist_ok=True)
+                    
                     # Salva no disco com qualidade otimizada para o recibo
-                    cv2.imwrite(self.last_photo_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+                    cv2.imwrite(photo_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+                    
+                    # Também salva em last_delivery para o dashboard
+                    cv2.imwrite(os.path.join("/tmp/rlight_photos", "last_delivery.jpg"), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+                    
                     # Retorna o path relativo que o local_api (static) já serve para o front-end
-                    return "/ui/assets/last_delivery.jpg"
+                    return f"/photos/{photo_name}"
                 return None
             except Exception as e:
                 print(f"[WebCam] Erro ao capturar snapshot: {e}")
