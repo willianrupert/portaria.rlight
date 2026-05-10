@@ -1,7 +1,10 @@
-pygame>=2.5.2
 pyserial>=3.5
 paho-mqtt>=1.6.1
 requests>=2.31.0
 opencv-python-headless>=4.8.1
 qrcode[pil]>=7.4.2
 python-dotenv>=1.0.0
+fastapi>=0.110.0
+uvicorn>=0.29.0
+sdnotify>=0.3.2
+websockets>=12.0
