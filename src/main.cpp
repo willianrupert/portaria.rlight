@@ -20,8 +20,8 @@ void taskLogicBrain(void* p);
 void taskSensorHub(void* p);
 
 void setup() {
-  esp_task_wdt_deinit(); 
-  Serial.begin(115200);   
+  esp_task_wdt_init(TWDT_TIMEOUT_S, true); 
+  Serial.begin(115200);
   
   // RF OFF para estabilidade da Balança e ADC
   esp_wifi_stop(); 
@@ -36,7 +36,9 @@ void setup() {
   Scale::instance().init();
   MmWave::instance().init();
   QRReader::instance().init();
-  KeypadHandler::instance().init(0x20); // PCF8574 v7+
+  KeypadHandler::instance().init(I2C_ADDR_KEYPAD); 
+  PowerMonitor::P1().init(I2C_ADDR_INA219);
+  PowerMonitor::P2().init(I2C_ADDR_INA219_P2);
 
   // Configuração de Pinos v8
   pinMode(PIN_SW_P1, INPUT_PULLUP);
@@ -68,9 +70,11 @@ void loop() {
 
 // ── CORE 0: LOGIC BRAIN (100Hz) ──────────────────────────────────────
 void taskLogicBrain(void* p) {
+  esp_task_wdt_add(NULL);
   TickType_t last_wake = xTaskGetTickCount();
   
   while (true) {
+    esp_task_wdt_reset();
     // 1. Obtém snapshot do mundo físico
     PhysicalState world = SharedMemory::instance().getSnapshot();
     
@@ -100,15 +104,16 @@ void taskLogicBrain(void* p) {
 
 // ── CORE 1: SENSOR HUB (20Hz) ────────────────────────────────────────
 void taskSensorHub(void* p) {
+  esp_task_wdt_add(NULL);
   TickType_t last_wake = xTaskGetTickCount();
   PhysicalState s;
 
   while (true) {
+    esp_task_wdt_reset();
     // A. Sensores Digitais e Reed Switches (v8)
-    s.p1_open = (digitalRead(PIN_SW_P1) == LOW); // LOW = Magneto presente (Porta Fechada)? 
-    // Depende da fiação. Usualmente Reed NO fecha com imã.
-    // Vamos assumir LOW = Aberta (Pull-up interno, Reed liga GND quando fecha).
-    // Invertendo para lógica rlight: p1_open = true se porta aberta.
+    // Reed Switch NO + pull-up interno:
+    // Imã presente (porta FECHADA) = LOW
+    // Imã ausente (porta ABERTA)   = HIGH
     s.p1_open = (digitalRead(PIN_SW_P1) == HIGH); 
     s.p2_open = (digitalRead(PIN_SW_P2) == HIGH);
     s.gate_open = (digitalRead(PIN_SW_GATE) == HIGH);
@@ -128,9 +133,21 @@ void taskSensorHub(void* p) {
     }
 
     KeypadHandler::instance().update();
-    s.keypad_granted = false; // Reset flag legada. v8 usa WAITING_PASS na FSM.
+    const char* code_key = KeypadHandler::instance().getCode();
+    if (code_key != NULL) {
+      AccessResult r = AccessController::instance().validate(code_key);
+      s.keypad_granted = (r.type != AccessType::NONE && r.type != AccessType::DENIED);
+      s.keypad_access.type = r.type;
+      strlcpy(s.keypad_access.label, r.label, sizeof(s.keypad_access.label));
+    } else {
+      s.keypad_granted = false;
+    }
 
-    // D. Escrita na Memória Compartilhada
+    // D. Power Monitor (INA219)
+    PowerMonitor::P1().readWithRecovery(s.ina_p1_ma);
+    PowerMonitor::P2().readWithRecovery(s.ina_p2_ma);
+
+    // E. Escrita na Memória Compartilhada
     SharedMemory::instance().update(s);
     
     vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(50)); // 20Hz
