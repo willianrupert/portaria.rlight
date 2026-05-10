@@ -76,14 +76,16 @@ void UsbBridge::_dispatch(const char* raw) {
     }
   }
   else if (!strcmp(cmd, "CMD_ADD_WIEGAND_CODE")) {
-    String code = doc["code"].as<String>();
+    char code[24];
+    snprintf(code, sizeof(code), "%s", doc["code"] | "");
     const char* tl = doc["type_label"] | "RESIDENT:Morador";
-    bool ok = AccessController::instance().addCode(code.c_str(), tl);
+    bool ok = AccessController::instance().addCode(code, tl);
     if(ok) sendEvent("WIEGAND_CODE_ADDED", fsm.ctx());
   }
   else if (!strcmp(cmd, "CMD_REMOVE_WIEGAND_CODE")) {
-    String code = doc["code"].as<String>();
-    bool ok = AccessController::instance().removeCode(code.c_str());
+    char code[24];
+    snprintf(code, sizeof(code), "%s", doc["code"] | "");
+    bool ok = AccessController::instance().removeCode(code);
     if(ok) sendEvent("WIEGAND_CODE_REMOVED", fsm.ctx());
   }
   else if (!strcmp(cmd, "CMD_LIST_WIEGAND_CODES")) {
@@ -137,6 +139,8 @@ void UsbBridge::sendTelemetry(const PhysicalState& w, const FsmContext& ctx) {
   
   if (strlen(ctx.carrier) > 0) doc["carrier"] = ctx.carrier;
   if (strlen(ctx.resident_label) > 0) doc["resident_label"] = ctx.resident_label;
+  
+  doc["score"] = HealthMonitor::instance().systemScore();
   
   serializeJson(doc, Serial);
   Serial.println();
