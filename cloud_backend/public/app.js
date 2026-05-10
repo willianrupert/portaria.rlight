@@ -27,6 +27,10 @@ let deliveries = [];
 let keypadAsterisks = 0;
 let lockoutTimer = null;
 
+// Detecta se é Android (Chrome/WebView)
+const isAndroid = /Android/i.test(navigator.userAgent);
+const REDIRECT_KEY = 'rlight_redirect_ts';
+
 // ── Utilities ──────────────────────────────────────
 function show(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -277,41 +281,86 @@ document.getElementById('btn-save').onclick = async function() {
 // ── PWA Install Banner ─────────────────────────────
 const isStandalone = window.navigator.standalone === true
   || window.matchMedia('(display-mode: standalone)').matches;
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if (!isStandalone && !localStorage.getItem('pwa-dismissed')) {
+    setTimeout(() => {
+      const banner = document.getElementById('pwa-banner');
+      if (banner) {
+        const textEl = banner.querySelector('p:last-of-type');
+        if (textEl) textEl.textContent = 'Toque em "Instalar" para adicionar à tela inicial';
+        banner.style.display = 'block';
+      }
+    }, 3000);
+  }
+});
+
+const bannerBtn = document.querySelector('#pwa-banner button');
+if (bannerBtn) {
+  bannerBtn.addEventListener('click', () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      deferredInstallPrompt.userChoice.then(() => { deferredInstallPrompt = null; });
+    }
+    document.getElementById('pwa-banner').style.display = 'none';
+    localStorage.setItem('pwa-dismissed', '1');
+  });
+}
+
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 if (isIOS && !isStandalone && !localStorage.getItem('pwa-dismissed')) {
   setTimeout(() => { document.getElementById('pwa-banner').style.display = 'block'; }, 3000);
 }
 
 // ── Auth ───────────────────────────────────────────
-
+const redirectTs = parseInt(localStorage.getItem(REDIRECT_KEY) || '0');
+if (redirectTs && Date.now() - redirectTs > 120000) {
+  localStorage.removeItem(REDIRECT_KEY);
+  sessionStorage.clear();
+}
 
 document.getElementById('btn-login').onclick = function() {
   err('');
-  // signInWithPopup must be called SYNCHRONOUSLY inside click handler (no await before it)
-  // This preserves iOS Safari's gesture context required for popups
-  signInWithPopup(auth, provider).then(result => {
-    // success — onAuthStateChanged will handle the view switch
-    console.log('Popup login OK:', result.user.email);
-  }).catch(e => {
-    // Popup blocked or closed — fallback to redirect
-    if (e.code !== 'auth/popup-closed-by-user') {
-      signInWithRedirect(auth, provider);
-    } else {
-      err('Login cancelado.');
-    }
-  });
+  if (isAndroid) {
+    localStorage.setItem(REDIRECT_KEY, Date.now().toString());
+    signInWithRedirect(auth, provider);
+  } else {
+    signInWithPopup(auth, provider).then(result => {
+      console.log('Popup login OK:', result.user.email);
+    }).catch(e => {
+      if (e.code !== 'auth/popup-closed-by-user') {
+        localStorage.setItem(REDIRECT_KEY, Date.now().toString());
+        signInWithRedirect(auth, provider);
+      } else {
+        err('Login cancelado.');
+      }
+    });
+  }
 };
 
 // ── Boot ───────────────────────────────────────────
 (async () => {
   await setPersistence(auth, browserLocalPersistence);
 
-  // Process redirect result (critical for iOS Safari)
-  try { await getRedirectResult(auth); } catch(e) { err('Erro: ' + e.message); }
+  try {
+    const redirectResult = await Promise.race([
+      getRedirectResult(auth),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+    ]);
+    if (redirectResult?.user) {
+      localStorage.removeItem(REDIRECT_KEY);
+    }
+  } catch(e) {
+    if (e.message !== 'timeout') err('Erro no login: ' + e.message);
+  }
 
-  // Auth state: fires once immediately, then on every change
-  // By this point, if redirect succeeded, Firebase already set the user
+  let authResolved = false;
   onAuthStateChanged(auth, user => {
+    authResolved = true;
+    localStorage.removeItem(REDIRECT_KEY);
     if (user) {
       const first = user.displayName ? user.displayName.split(' ')[0] : 'Willian';
       document.getElementById('greeting').textContent = 'Olá, ' + first;
@@ -322,9 +371,13 @@ document.getElementById('btn-login').onclick = function() {
     }
   });
 
-  setTimeout(() => { if (document.getElementById('view-loading').classList.contains('active')) show('login'); }, 6000);
+  setTimeout(() => {
+    if (!authResolved) {
+      console.warn('[Auth] Firebase timeout — mostrando login');
+      show('login');
+    }
+  }, 8000);
 
-  // URL token check
   const p = new URLSearchParams(location.search);
   const tok = p.get('token') || p.get('id');
   if (tok) verifyReceipt(tok);
@@ -358,12 +411,16 @@ function showDetail(i) {
   document.getElementById('det-carrier').textContent = item.carrier;
   document.getElementById('det-weight').textContent = item.weight;
   document.getElementById('det-date').textContent = new Date(item.ts).toLocaleString('pt-BR');
-  const imgs = [
-    'https://images.unsplash.com/photo-1566576721346-d4a3b4eaad5b?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1586769852044-692d6e3703f0?w=800&auto=format&fit=crop'
-  ];
-  document.getElementById('det-photo').src = imgs[i % 3];
+  
+  const photoUrl = item.photo_path ? `/photos/${item.id || item.token_uuid}.jpg` : '';
+  const photoEl = document.getElementById('det-photo');
+  if (photoUrl) {
+    photoEl.src = photoUrl;
+    photoEl.style.display = 'block';
+    photoEl.onerror = () => { photoEl.style.display = 'none'; };
+  } else {
+    photoEl.style.display = 'none';
+  }
   show('details');
 }
 

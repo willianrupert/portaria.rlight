@@ -5,13 +5,15 @@
     {
       "src": "/favicon_v2.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": "/",
   "background_color": "#080810",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "scope": "/",
-  "theme_color": "#080810"
+  "theme_color": "#000000"
 }
