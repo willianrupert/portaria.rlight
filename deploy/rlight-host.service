@@ -1,0 +1,21 @@
+[Unit]
+Description=RLight Portaria v8 Host Service
+After=network.target
+
+[Service]
+Type=simple
+User=willian
+WorkingDirectory=/opt/rlight/host
+Environment=PYTHONPATH=/opt/rlight/host
+Environment=SMTP_SERVER=smtp.gmail.com
+Environment=SMTP_PORT=587
+Environment=SMTP_USER=user@gmail.com
+Environment=SMTP_PASS=pass
+Environment=MQTT_HOST=localhost
+Environment=MQTT_PORT=1883
+ExecStart=/usr/bin/python3 /opt/rlight/host/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
