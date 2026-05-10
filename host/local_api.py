@@ -8,7 +8,7 @@ from core.serial_bridge import esp32_bridge
 
 app = FastAPI(title="RLight API Local")
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'deliveries.db')
+DB_PATH = "/var/lib/rlight/deliveries.db"
 UI_DIR = os.path.join(os.path.dirname(__file__), 'ui', 'web')
 
 # Garantir que o diretório de fotos exista para não quebrar o mount
