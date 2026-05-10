@@ -61,6 +61,8 @@ struct FsmContext {
   uint32_t resident_p2_timer  = 0;   // início do delay de 2s para P2
   uint8_t  keypad_fails       = 0;   // contador de tentativas falhas (v8)
   uint32_t lockout_until      = 0;   // tempo de desbloqueio (v8)
+  uint32_t prev_duration_ms   = 0;   // duração do estado anterior (substitui millis_at_sync em transição)
+  uint32_t loiter_start       = 0;   // para controle de timeout em IDLE (S1)
 };
 
 class StateMachine {
