@@ -38,18 +38,27 @@ def get_door_state():
         "age_ms": 0
     }
 
+from pydantic import BaseModel
+from fastapi import HTTPException
+
+class ActuateRequest(BaseModel):
+    device: str
+
+class SettingsRequest(BaseModel):
+    key: str | None = None
+    val: str | int | float | bool | None = None
+
 @app.post("/actuate")
-def actuate_device(body: dict):
-    device = body.get("device")
+def actuate_device(body: ActuateRequest):
     cmd_map = {"p1": "CMD_OPEN_P1", "p2": "CMD_OPEN_P2", "gate": "CMD_OPEN_GATE"}
-    if device not in cmd_map:
-        return {"ok": False, "error": "Dispositivo inválido"}
-    esp32_bridge.send_cmd(cmd_map[device])
+    if body.device not in cmd_map:
+        raise HTTPException(status_code=400, detail="Dispositivo inválido")
+    esp32_bridge.send_cmd(cmd_map[body.device])
     return {"ok": True}
 
 @app.post("/settings")
 def update_settings(body: dict):
-    # Aceita { "key": "...", "val": ... } ou { "key1": "val1", ... }
+    # Mantemos suporte a dict dinâmico mas poderíamos usar SettingsRequest se o cloud enviar um por um
     if "key" in body and "val" in body:
         esp32_bridge.send_cmd("CMD_UPDATE_CFG", {body["key"]: body["val"]})
     else:

@@ -23,7 +23,7 @@ class HostConfig:
     MQTT_PASS: str = os.getenv("MQTT_PASS", "mqtt_password")
     
     # Oracle Cloud Server
-    ORACLE_API_URL: str = os.getenv("ORACLE_API_URL", "https://api.oraclecloud.com/v1/portaria/receipts")
+    ORACLE_API_URL: str = os.getenv("ORACLE_API_URL", "https://portaria.rlight.com.br/api/sync")
     ORACLE_BEARER: str = os.getenv("ORACLE_BEARER", "YOUR_BEARER_TOKEN")
     
 config = HostConfig()

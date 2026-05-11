@@ -41,4 +41,9 @@ def check_and_update(current_version: str, local_version: str):
         return False
 
 if __name__ == "__main__":
-    check_and_update("v6.0.0", "v6.1.0")
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--current", required=True, help="Versão atual no ESP32")
+    parser.add_argument("--target",  required=True, help="Versão alvo do firmware")
+    args = parser.parse_args()
+    check_and_update(args.current, args.target)

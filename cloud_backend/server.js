@@ -4,9 +4,35 @@ const crypto  = require('crypto');
 const path    = require('path');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
+const Database = require('better-sqlite3');
+const multer   = require('multer');
+const fs       = require('fs');
+
 const app  = express();
 const PORT = process.env.PORT || 3005;
 const OPI_HOST = process.env.OPI_HOST || 'http://192.168.1.100:8080';
+const DB_PATH  = process.env.DB_PATH || path.join(__dirname, 'deliveries.db');
+const UPLOADS_DIR = path.join(__dirname, 'public', 'photos');
+
+// Inicializa DB se não existir
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+const db = new Database(DB_PATH);
+db.exec(`
+    CREATE TABLE IF NOT EXISTS deliveries (
+        token_uuid TEXT PRIMARY KEY,
+        ts INTEGER,
+        carrier TEXT,
+        weight_g INTEGER,
+        photo_path TEXT,
+        jwt TEXT
+    )
+`);
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOADS_DIR),
+    filename: (req, file, cb) => cb(null, file.originalname)
+});
+const upload = multer({ storage });
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_PREV_SECRET = process.env.JWT_PREV_SECRET;
@@ -23,22 +49,45 @@ app.use('/__/', createProxyMiddleware({
     logLevel: 'silent'
 }));
 
-// ── Photos Proxy ──────────────────────────────────────────────────────────
-app.use('/photos/', createProxyMiddleware({
-    target: OPI_HOST,
-    changeOrigin: true
-}));
-
 // ── Static + JSON ─────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// ── API: History Proxy ────────────────────────────────────────────────────
-app.use('/api/history', createProxyMiddleware({
-    target: OPI_HOST,
-    changeOrigin: true,
-    pathRewrite: { '^/api/history': '/entregas' }
-}));
+// ── API: Sync (Recebe do OPi) ─────────────────────────────────────────────
+app.post('/api/sync', upload.single('image'), (req, res) => {
+    const { delivery_token, timestamp, weight, carrier } = req.body;
+    const token_uuid = req.file ? req.file.originalname.replace('.jpg', '') : `rec-${Date.now()}`;
+    
+    try {
+        const stmt = db.prepare(`
+            INSERT OR REPLACE INTO deliveries (token_uuid, ts, carrier, weight_g, photo_path, jwt)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        stmt.run(token_uuid, parseInt(timestamp), carrier, parseInt(weight), `/photos/${token_uuid}.jpg`, delivery_token);
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ── API: History (Lê do DB local) ─────────────────────────────────────────
+app.get('/api/history', (req, res) => {
+    try {
+        const rows = db.prepare('SELECT * FROM deliveries ORDER BY ts DESC LIMIT 50').all();
+        res.json(rows.map(r => ({
+            id: r.token_uuid,
+            carrier: r.carrier,
+            weight: r.weight_g + 'g',
+            ts: r.ts * 1000,
+            photo_path: r.photo_path
+        })));
+    } catch (e) {
+        res.status(500).json({ ok: false, error: e.message });
+    }
+});
+
+// ── Photos Proxy (Mantenha se quiser ainda buscar do OPi, mas agora servimos local também via express.static em /public)
+app.use('/photos/', express.static(UPLOADS_DIR));
 
 // ── API: Door Status Proxy ────────────────────────────────────────────────
 app.use('/api/doors', createProxyMiddleware({

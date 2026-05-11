@@ -75,110 +75,147 @@ AccessResult AccessController::validate(const char* code) {
     return result;
   }
 
-  char key[16];
+  char key[20];
   snprintf(key, sizeof(key), "c_%s", code);
 
+  char val[48] = "";
   Preferences p;
   p.begin("access_db", true);
-  String val = p.getString(key, "");
+  p.getString(key, val, sizeof(val));
   p.end();
 
-  if (val.length() == 0) {
+  if (val[0] == '\0') {
     recordFailure();
     result.type = AccessType::NONE;
     return result;
   }
 
   resetRateLimit();
-  // Formato no NVS: "T:Label" (T: 1=Res, 2=ML, 3=Amazon...)
   char type_code = val[0];
-  strlcpy(result.label, val.c_str() + 2, sizeof(result.label));
+  // Formato: "T:Label"
+  const char* label_start = (strlen(val) > 2) ? val + 2 : "";
+  strlcpy(result.label, label_start, sizeof(result.label));
 
-  if (type_code == '1') result.type = AccessType::RESIDENT;
+  if      (type_code == '1') result.type = AccessType::RESIDENT;
   else if (type_code == '2') result.type = AccessType::REVERSE_ML;
   else if (type_code == '3') result.type = AccessType::REVERSE_AMAZON;
   else if (type_code == '4') result.type = AccessType::REVERSE_CORREIOS;
-  else result.type = AccessType::REVERSE_GENERIC;
+  else                       result.type = AccessType::REVERSE_GENERIC;
 
   return result;
 }
 
 bool AccessController::addCode(const char* code, const char* type_label) {
-  char key[16];
+  char key[20];
   snprintf(key, sizeof(key), "c_%s", code);
-  
+
   Preferences p;
   p.begin("access_db", false);
   p.putString(key, type_label);
-  
-  // Atualiza índice CSV
-  String index = p.getString("index", "");
-  if (index.indexOf(code) == -1) {
-    if (index.length() > 0) index += ",";
-    index += code;
-    p.putString("index", index);
+
+  char index_buf[512] = "";
+  p.getString("index", index_buf, sizeof(index_buf));
+
+  // Verifica se o código já está no índice (busca manual)
+  bool found = false;
+  char* ptr = strstr(index_buf, code);
+  if (ptr) {
+    char before = (ptr == index_buf) ? '\0' : *(ptr - 1);
+    char after  = ptr[strlen(code)];
+    if ((before == '\0' || before == ',') && (after == '\0' || after == ','))
+      found = true;
+  }
+
+  if (!found) {
+    size_t idx_len = strlen(index_buf);
+    if (idx_len > 0 && idx_len < sizeof(index_buf) - strlen(code) - 2) {
+      strncat(index_buf, ",", sizeof(index_buf) - idx_len - 1);
+      strncat(index_buf, code, sizeof(index_buf) - idx_len - 2);
+    } else if (idx_len == 0) {
+      strlcpy(index_buf, code, sizeof(index_buf));
+    }
+    p.putString("index", index_buf);
   }
   p.end();
   return true;
 }
 
 bool AccessController::removeCode(const char* code) {
-  char key[16];
+  char key[20];
   snprintf(key, sizeof(key), "c_%s", code);
-  
+
   Preferences p;
   p.begin("access_db", false);
   p.remove(key);
-  
-  // Remove do índice
-  String index = p.getString("index", "");
-  int pos = index.indexOf(code);
-  if (pos != -1) {
-    int end = pos + strlen(code);
-    if (index[end] == ',') end++;
-    else if (pos > 0 && index[pos-1] == ',') pos--;
-    index.remove(pos, end - pos);
-    p.putString("index", index);
+
+  char index_buf[512] = "";
+  p.getString("index", index_buf, sizeof(index_buf));
+
+  char result_buf[512] = "";
+  char tmp[512];
+  strlcpy(tmp, index_buf, sizeof(tmp));
+
+  char* tok = strtok(tmp, ",");
+  bool first = true;
+  while (tok) {
+    if (strcmp(tok, code) != 0) {
+      if (!first) strncat(result_buf, ",", sizeof(result_buf) - strlen(result_buf) - 1);
+      strncat(result_buf, tok, sizeof(result_buf) - strlen(result_buf) - 1);
+      first = false;
+    }
+    tok = strtok(nullptr, ",");
   }
+
+  p.putString("index", result_buf);
   p.end();
   return true;
 }
 
 void AccessController::listCodes(char* out_buf, size_t buf_sz) {
-  Preferences p;
-  p.begin("access_db", true);
-  String index = p.getString("index", "");
-  p.end();
+  char index_buf[512] = "";
+  {
+    Preferences p;
+    p.begin("access_db", true);
+    p.getString("index", index_buf, sizeof(index_buf));
+    p.end();
+  }
 
   strlcpy(out_buf, "[", buf_sz);
-  if (index.length() == 0) {
+
+  if (index_buf[0] == '\0') {
     strlcat(out_buf, "]", buf_sz);
     return;
   }
 
-  char temp[index.length() + 1];
-  strcpy(temp, index.c_str());
-  char* token = strtok(temp, ",");
+  char tmp[512];
+  strlcpy(tmp, index_buf, sizeof(tmp));
+  char* tok = strtok(tmp, ",");
   bool first = true;
 
-  while (token != NULL) {
-    char key[16];
-    snprintf(key, sizeof(key), "c_%s", token);
-    
-    p.begin("access_db", true);
-    String val = p.getString(key, "");
-    p.end();
+  while (tok) {
+    char key[20];
+    snprintf(key, sizeof(key), "c_%s", tok);
 
-    if (val.length() > 0) {
+    char val[48] = "";
+    {
+      Preferences p;
+      p.begin("access_db", true);
+      p.getString(key, val, sizeof(val));
+      p.end();
+    }
+
+    if (val[0] != '\0') {
       char entry[128];
-      snprintf(entry, sizeof(entry), "%s{\"token\":\"%s\",\"type\":\"%c\",\"label\":\"%s\"}",
-               first ? "" : ",", token, val[0], val.c_str() + 2);
+      const char* lbl = (strlen(val) > 2) ? val + 2 : "";
+      snprintf(entry, sizeof(entry),
+        "%s{\"token\":\"%s\",\"type\":\"%c\",\"label\":\"%s\"}",
+        first ? "" : ",", tok, val[0], lbl);
       if (strlen(out_buf) + strlen(entry) < buf_sz - 2) {
         strlcat(out_buf, entry, buf_sz);
         first = false;
       }
     }
-    token = strtok(NULL, ",");
+    tok = strtok(nullptr, ",");
   }
   strlcat(out_buf, "]", buf_sz);
 }

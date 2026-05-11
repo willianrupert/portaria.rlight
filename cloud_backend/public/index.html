@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- RLight Portaria v8.3 -->
+<!-- RLight Portaria v8.4 — Apple Liquid Glass -->
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -10,309 +10,343 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="/favicon_v2.png">
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
-<title>RLight — Portaria Digital</title>
+<meta name="theme-color" content="#0A0A18" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#CDD0E8" media="(prefers-color-scheme: light)">
+<title>rlight — Portaria</title>
 <link rel="icon" type="image/png" href="/favicon_v2.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="bg"></div>
-  <div class="panel">
-    <div class="panel-content">
+
+<!-- Animated mesh background -->
+<div class="bg">
+  <div class="bg-orb"></div>
+</div>
+
+<div class="panel">
+  <div class="panel-content">
 
     <!-- LOADING -->
     <div id="view-loading" class="view active">
-    <div class="spin"></div>
-    <p style="color:var(--muted);font-size:14px;">Verificando sessão...</p>
-  </div>
+      <div class="spin"></div>
+      <p style="color:var(--muted);font-size:14px;font-weight:500;letter-spacing:0.01em;">Verificando sessão</p>
+    </div>
 
-  <!-- LOGIN -->
-  <div id="view-login" class="view">
-    <svg class="shield" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-    </svg>
-    <h1>Acesso Restrito</h1>
-    <p class="sub">Portaria Digital RLight v8</p>
-    <div id="err"></div>
-    <button class="btn-g" id="btn-login">
-      <svg width="20" height="20" viewBox="0 0 24 24">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    <!-- LOGIN -->
+    <div id="view-login" class="view">
+      <svg class="shield" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="M9 12l2 2 4-4" stroke-width="1.8"/>
       </svg>
-      Entrar com Google
-    </button>
-    <span class="reset" onclick="window._resetAuth()">Problemas no login? Toque aqui</span>
-  </div>
-
-  <!-- DASHBOARD -->
-  <div id="view-dashboard" class="view">
-    <div class="dash-header">
-      <div>
-        <div id="greeting" style="font-size:32px;font-weight:700;letter-spacing:-.8px;">Olá</div>
-        <p style="color:var(--muted);font-size:14px;margin-top:4px;">Portaria RLight v8</p>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button class="gear-btn" id="btn-remote" title="Controle Remoto">
-          <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
-            <path d="M4 15C4 10 7.1 7 11 7C14.9 7 18 10 18 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            <path d="M7 15C7 11.7 8.8 9.5 11 9.5C13.2 9.5 15 11.7 15 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            <circle cx="11" cy="15.5" r="1.5" fill="currentColor"/>
-          </svg>
-        </button>
-        <button class="gear-btn" id="btn-settings">⚙</button>
-      </div>
+      <h1>Acesso Restrito</h1>
+      <p class="sub">Portaria Digital RLight</p>
+      <div id="err"></div>
+      <button class="btn-g" id="btn-login">
+        <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink:0">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Entrar com Google
+      </button>
+      <span class="reset" onclick="window._resetAuth()">Problemas no login? Toque aqui</span>
     </div>
-    <p class="section-label" style="margin-top:20px;">Entregas Recentes</p>
-    <div id="history-list" style="width:100%;"></div>
-    <button class="btn-logout" style="margin-top:24px;" id="btn-logout">Encerrar Sessão</button>
-  </div>
 
-  <!-- REMOTE CONTROL -->
-  <div id="view-remote" class="view">
-    <div class="settings-header">
-      <button class="back-btn" id="btn-back-remote">←</button>
-      <h1 style="font-size:22px;">Controle Remoto</h1>
+    <!-- DASHBOARD -->
+    <div id="view-dashboard" class="view">
+      <div class="dash-header">
+        <div>
+          <div id="greeting" style="font-size:34px;font-weight:700;letter-spacing:-.9px;">Olá</div>
+          <p class="dash-subtitle">Portaria RLight</p>
+        </div>
+        <div class="header-actions">
+          <button class="gear-btn" id="btn-remote" title="Controle Remoto" aria-label="Controle Remoto">
+            <!-- Signal/wifi icon — remote control -->
+            <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+              <path d="M4 15C4 10 7.1 7 11 7C14.9 7 18 10 18 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M7 15C7 11.7 8.8 9.5 11 9.5C13.2 9.5 15 11.7 15 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="11" cy="15.5" r="1.5" fill="currentColor"/>
+            </svg>
+          </button>
+          <button class="gear-btn" id="btn-settings" aria-label="Configurações">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <p class="section-label" style="margin-top:24px;">Entregas Recentes</p>
+      <div id="history-list" style="width:100%;"></div>
+      <button class="btn-logout" id="btn-logout">Encerrar Sessão</button>
     </div>
-    <div style="width:100%;">
-      <div class="remote-card UNKNOWN" id="rc-p1">
-        <div class="rc-header">
-          <span class="rc-icon">🔒</span>
-          <span class="rc-name">Porta P1</span>
-          <span class="rc-status">—</span>
-        </div>
-        <p class="rc-sub">Entrada Externa</p>
-        <div class="rc-indicators">
-          <span class="rc-ind"><span class="rc-dot off" id="rc-p1-reed"></span>Reed</span>
-          <span class="rc-ind"><span class="rc-dot off" id="rc-p1-strike"></span>Strike</span>
-        </div>
-        <button class="rc-btn" id="rc-btn-p1">Acionar</button>
-      </div>
-      <div class="remote-card UNKNOWN" id="rc-p2">
-        <div class="rc-header">
-          <span class="rc-icon">🔒</span>
-          <span class="rc-name">Porta P2</span>
-          <span class="rc-status">—</span>
-        </div>
-        <p class="rc-sub">Acesso Interno</p>
-        <div class="rc-indicators">
-          <span class="rc-ind"><span class="rc-dot off" id="rc-p2-reed"></span>Reed</span>
-          <span class="rc-ind"><span class="rc-dot off" id="rc-p2-strike"></span>Strike</span>
-        </div>
-        <button class="rc-btn" id="rc-btn-p2">Acionar</button>
-      </div>
-      <div class="remote-card UNKNOWN" id="rc-gate">
-        <div class="rc-header">
-          <span class="rc-icon">🏠</span>
-          <span class="rc-name">Portão</span>
-          <span class="rc-status">—</span>
-        </div>
-        <p class="rc-sub">Garagem</p>
-        <div class="rc-indicators">
-          <span class="rc-ind"><span class="rc-dot off" id="rc-gate-reed"></span>Reed</span>
-          <span class="rc-ind"><span class="rc-dot off" id="rc-gate-relay"></span>Motor</span>
-        </div>
-        <button class="rc-btn" id="rc-btn-gate">Acionar</button>
-      </div>
-      <div class="rc-footer">
-        <span id="rc-age">Aguardando...</span>
-        <button class="rc-refresh" id="rc-refresh-btn">↺ Atualizar</button>
-      </div>
-    </div>
-  </div>
 
-  <!-- WAITING PASS (v8) -->
-  <div id="view-WAITING_PASS" class="view">
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2">
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-    </svg>
-    <h1 style="margin-top:20px;">Verificando Acesso</h1>
-    <p class="sub">Digite sua senha no teclado físico</p>
-    <div id="keypad-dots" style="display:flex;gap:12px;margin-top:10px;"></div>
-    <div id="keypad-timer" style="margin-top:32px;font-size:12px;color:var(--muted);"></div>
-  </div>
-
-  <!-- LOCKOUT KEYPAD (v8) -->
-  <div id="view-LOCKOUT_KEYPAD" class="view">
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2">
-      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-      <line x1="12" y1="9" x2="12" y2="13"/>
-      <line x1="12" y1="17" x2="12.01" y2="17"/>
-    </svg>
-    <h1 style="margin-top:20px;color:var(--red);">Teclado Bloqueado</h1>
-    <p class="sub">Muitas tentativas incorretas.</p>
-    <div id="lockout-countdown" style="font-size:32px;font-weight:700;margin-top:10px;">--:--</div>
-    <p style="color:var(--muted);font-size:12px;margin-top:20px;">Aguarde o tempo de segurança</p>
-  </div>
-
-  <!-- PWA INSTALL BANNER -->
-  <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;
-    background:rgba(10,10,20,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-    border-top:1px solid rgba(255,255,255,.1);padding:16px 20px;padding-bottom:max(16px,env(safe-area-inset-bottom));">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span style="font-size:28px;">📲</span>
-      <div style="flex:1;">
-        <p style="font-size:14px;font-weight:600;margin-bottom:2px;">Adicione à Tela Inicial</p>
-        <p style="font-size:12px;color:var(--muted);">Safari → <b>⬆ Compartilhar</b> → "Adicionar à Tela de Início" → Tela cheia real</p>
+    <!-- REMOTE CONTROL -->
+    <div id="view-remote" class="view">
+      <div class="settings-header">
+        <button class="back-btn" id="btn-back-remote" aria-label="Voltar">←</button>
+        <h1 style="font-size:22px;font-weight:700;letter-spacing:-.5px;">Controle Remoto</h1>
       </div>
-      <button onclick="document.getElementById('pwa-banner').style.display='none';localStorage.setItem('pwa-dismissed','1')"
-        style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px;">✕</button>
-    </div>
-  </div>
-
-  <!-- SETTINGS -->
-  <div id="view-settings" class="view">
-    <div class="settings-header">
-      <button class="back-btn" id="btn-back-dash">←</button>
-      <h1 style="font-size:22px;">Configurações</h1>
-    </div>
-    <div class="settings-scroll">
-
-      <p class="section-label" style="margin-top:0;">⚙️ Geral</p>
-      <div class="s-group">
-        <div class="s-row"><span class="s-label">Modo Manutenção</span><label class="sw"><input type="checkbox" id="cfg-maint"><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-        <div class="s-row"><span class="s-label">Portaria 24 horas</span><label class="sw"><input type="checkbox" id="cfg-always-open" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-        <div class="s-row"><span class="s-label">Horário início (h)</span><input type="number" id="cfg-op-start" class="s-val" value="7" min="0" max="23"></div>
-        <div class="s-row"><span class="s-label">Horário fim (h)</span><input type="number" id="cfg-op-end" class="s-val" value="22" min="0" max="23"></div>
-      </div>
-
-      <p class="section-label">🚪 Porta P1 — Trava Externa</p>
-      <div class="s-group">
-        <div class="s-row"><span class="s-label">Strike P1 habilitado</span><label class="sw"><input type="checkbox" id="cfg-strike-p1-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-        <div class="s-row"><span class="s-label">Pulso Strike P1</span><div class="range-wrap"><input type="range" id="cfg-door-open-ms" min="500" max="10000" step="100" value="3000" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">3000ms</span></div></div>
-        <div class="s-row"><span class="s-label">Timeout auth P1</span><div class="range-wrap"><input type="range" id="cfg-auth-timeout" min="5000" max="30000" step="1000" value="10000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">10s</span></div></div>
-        <div class="s-row"><span class="s-label">Alerta P1 aberta</span><div class="range-wrap"><input type="range" id="cfg-door-alert-ms" min="30000" max="300000" step="5000" value="90000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">90s</span></div></div>
-        <div class="s-row"><span class="s-label">Alerta ciclos strike</span><input type="number" id="cfg-strike-cycle-alert" class="s-val" value="80000"></div>
-      </div>
-
-      <p class="section-label">🚪 Porta P2 — Trava Interna</p>
-      <div class="s-group">
-        <div class="s-row"><span class="s-label">Strike P2 habilitado</span><label class="sw"><input type="checkbox" id="cfg-strike-p2-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-        <div class="s-row"><span class="s-label">Pulso Strike P2</span><div class="range-wrap"><input type="range" id="cfg-p2-open-ms" min="500" max="8000" step="100" value="3000" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">3000ms</span></div></div>
-        <div class="s-row"><span class="s-label">Delay P1→P2</span><div class="range-wrap"><input type="range" id="cfg-p2-delay-ms" min="500" max="5000" step="100" value="2000" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">2000ms</span></div></div>
-        <div class="s-row"><span class="s-label">Janela acesso P2</span><div class="range-wrap"><input type="range" id="cfg-p2-window-ms" min="10000" max="120000" step="5000" value="30000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">30s</span></div></div>
-        <div class="s-row"><span class="s-label">Alerta P2 aberta</span><div class="range-wrap"><input type="range" id="cfg-p2-alert-ms" min="30000" max="300000" step="5000" value="60000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">60s</span></div></div>
-      </div>
-
-      <p class="section-label">🏠 Portão — Motor</p>
-      <div class="s-group">
-        <div class="s-row"><span class="s-label">Portão habilitado</span><label class="sw"><input type="checkbox" id="cfg-gate-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-        <div class="s-row"><span class="s-label">Pulso botoeira (ms)</span><div class="range-wrap"><input type="range" id="cfg-gate-relay-ms" min="200" max="3000" step="50" value="500" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">500ms</span></div></div>
-        <div class="s-row"><span class="s-label">Alerta portão aberto</span><div class="range-wrap"><input type="range" id="cfg-gate-alert-ms" min="30000" max="600000" step="30000" value="120000" oninput="this.nextElementSibling.textContent=(this.value/60000).toFixed(1)+'min'"><span class="range-num">2.0min</span></div></div>
-        <div class="s-row"><span class="s-label">Fechar auto após entrada</span><label class="sw"><input type="checkbox" id="cfg-gate-auto-close"><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-        <div class="s-row"><span class="s-label">Delay fechar auto</span><div class="range-wrap"><input type="range" id="cfg-gate-close-delay" min="5000" max="60000" step="1000" value="15000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">15s</span></div></div>
-      </div>
-
-      <p class="section-label">⏱️ Timers FSM</p>
-      <div class="s-group">
-        <div class="s-row"><span class="s-label">Timeout AWAKE</span><div class="range-wrap"><input type="range" id="cfg-awake-ms" min="15000" max="120000" step="5000" value="60000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">60s</span></div></div>
-        <div class="s-row"><span class="s-label">Timeout QR Code</span><div class="range-wrap"><input type="range" id="cfg-qr-ms" min="10000" max="60000" step="5000" value="30000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">30s</span></div></div>
-        <div class="s-row"><span class="s-label">Timeout INSIDE_WAIT</span><div class="range-wrap"><input type="range" id="cfg-inside-ms" min="60000" max="600000" step="30000" value="180000" oninput="this.nextElementSibling.textContent=(this.value/60000).toFixed(1)+'min'"><span class="range-num">3.0min</span></div></div>
-        <div class="s-row"><span class="s-label">Exibição comprovante</span><div class="range-wrap"><input type="range" id="cfg-receipt-ms" min="30000" max="300000" step="10000" value="120000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">120s</span></div></div>
-      </div>
-
-      <p class="section-label">⚖️ Balança (HX711)</p>
-      <div class="s-group">
-        <div class="s-row"><span class="s-label">Peso mínimo entrega (g)</span><div class="range-wrap"><input type="range" id="cfg-min-w-g" min="20" max="500" step="10" value="50" oninput="this.nextElementSibling.textContent=this.value+'g'"><span class="range-num">50g</span></div></div>
-        <div class="s-row"><span class="s-label">Drift auto-zero (g)</span><div class="range-wrap"><input type="range" id="cfg-az-max" min="5" max="200" step="5" value="50" oninput="this.nextElementSibling.textContent=this.value+'g'"><span class="range-num">50g</span></div></div>
-        <div class="s-row"><span class="s-label">Peso de referência (g)</span><input type="number" id="cfg-cal-weight" class="s-val" value="1000"></div>
-        <div class="s-row" style="justify-content:center;gap:12px;">
-          <button onclick="sendCmd('CMD_TARE_SCALE',0)" style="flex:1;padding:11px;background:rgba(10,132,255,.15);color:var(--blue);border:1px solid rgba(10,132,255,.3);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">⚖️ Tarar</button>
-          <button onclick="sendCmd('CMD_CALIBRATE_SCALE',document.getElementById('cfg-cal-weight').value)" style="flex:1;padding:11px;background:rgba(48,209,88,.1);color:var(--green);border:1px solid rgba(48,209,88,.3);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">📐 Calibrar</button>
-        </div>
-      </div>
-
-      <p class="section-label">⚡ INA219 — Corrente</p>
-      <div class="s-group">
-        <div class="s-row"><span class="s-label">Mín Strike P1 (mA)</span><div class="range-wrap"><input type="range" id="cfg-ina-min" min="100" max="800" step="25" value="400" oninput="this.nextElementSibling.textContent=this.value+'mA'"><span class="range-num">400mA</span></div></div>
-        <div class="s-row"><span class="s-label">Máx Strike P1 (mA)</span><div class="range-wrap"><input type="range" id="cfg-ina-max" min="500" max="2000" step="50" value="1200" oninput="this.nextElementSibling.textContent=this.value+'mA'"><span class="range-num">1200mA</span></div></div>
-        <div class="s-row"><span class="s-label">Mín Strike P2 (mA)</span><div class="range-wrap"><input type="range" id="cfg-ina-p2-min" min="100" max="800" step="25" value="400" oninput="this.nextElementSibling.textContent=this.value+'mA'"><span class="range-num">400mA</span></div></div>
-        <div class="s-row"><span class="s-label">Máx Strike P2 (mA)</span><div class="range-wrap"><input type="range" id="cfg-ina-p2-max" min="500" max="2000" step="50" value="1200" oninput="this.nextElementSibling.textContent=this.value+'mA'"><span class="range-num">1200mA</span></div></div>
-      </div>
-
-      <p class="section-label">💡 LED & Buzzer</p>
-      <div class="s-group">
-        <div class="s-row"><span class="s-label">Brilho LED máx</span><div class="range-wrap"><input type="range" id="cfg-led-btn-max" min="50" max="255" step="5" value="200" oninput="this.nextElementSibling.textContent=this.value"><span class="range-num">200</span></div></div>
-        <div class="s-row"><span class="s-label">Período breathing (ms)</span><div class="range-wrap"><input type="range" id="cfg-led-breathe" min="500" max="5000" step="100" value="2000" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">2000ms</span></div></div>
-        <div class="s-row"><span class="s-label">Buzzer habilitado</span><label class="sw"><input type="checkbox" id="cfg-buzzer-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-        <div class="s-row"><span class="s-label">Duração bipe (ms)</span><div class="range-wrap"><input type="range" id="cfg-buzzer-ms" min="50" max="500" step="25" value="100" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">100ms</span></div></div>
-        <div class="s-row"><span class="s-label">Silenciar fora horário</span><label class="sw"><input type="checkbox" id="cfg-buzzer-silent"><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-      </div>
-
-      <p class="section-label">🔑 Teclado & Acesso</p>
-      <div class="s-group">
-        <div class="s-row"><span class="s-label">Tentativas antes bloqueio</span><input type="number" id="cfg-kp-max-fails" class="s-val" value="5" min="3" max="10"></div>
-        <div class="s-row"><span class="s-label">Duração bloqueio (s)</span><input type="number" id="cfg-kp-lockout-s" class="s-val" value="600"></div>
-        <div class="s-row" style="justify-content:flex-end;">
-          <button onclick="sendCmd('CMD_RESET_KEYPAD_LOCKOUT',0)" style="padding:9px 16px;background:rgba(255,69,58,.12);color:var(--red);border:1px solid rgba(255,69,58,.3);border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;">🔓 Resetar Bloqueio</button>
-        </div>
-      </div>
-
-      <p class="section-label">📡 Radar de Presença (mmWave)</p>
-      <div class="s-group">
-        <div class="s-row"><span class="s-label">Debounce presença (ms)</span><div class="range-wrap"><input type="range" id="cfg-radar-dbc" min="500" max="5000" step="100" value="1500" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">1500ms</span></div></div>
-        <div class="s-row"><span class="s-label">Exigir radar vazio</span><label class="sw"><input type="checkbox" id="cfg-mmw-req" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-        <div class="s-row"><span class="s-label">Alerta loitering</span><label class="sw"><input type="checkbox" id="cfg-loiter-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-        <div class="s-row"><span class="s-label">Tempo loitering</span><div class="range-wrap"><input type="range" id="cfg-loiter-ms" min="10000" max="120000" step="5000" value="30000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">30s</span></div></div>
-        <div class="s-row"><span class="s-label">Stale data máx (ms)</span><div class="range-wrap"><input type="range" id="cfg-stale-ms" min="50" max="500" step="25" value="150" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">150ms</span></div></div>
-        <details style="width:100%;padding:12px 0;">
-          <summary style="font-size:13px;color:var(--muted);cursor:pointer;list-style:none;">▶ Gates de distância (avançado — 9 gates × 0,75m)</summary>
-          <div style="margin-top:12px;">
-            <div id="mmw-gates"></div>
+      <div style="width:100%;">
+        <div class="remote-card UNKNOWN" id="rc-p1">
+          <div class="rc-header">
+            <span class="rc-icon" aria-hidden="true">🔒</span>
+            <span class="rc-name">Porta P1</span>
+            <span class="rc-status">—</span>
           </div>
-        </details>
-      </div>
-
-      <p class="section-label">🌡️ Cooler (Controle Térmico)</p>
-      <div class="s-group">
-        <div class="s-row"><span class="s-label">Controle automático</span><label class="sw"><input type="checkbox" id="cfg-cooler-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-        <div class="s-row"><span class="s-label">Temp. início (°C)</span><div class="range-wrap"><input type="range" id="cfg-cool-min" min="35" max="60" step="1" value="45" oninput="this.nextElementSibling.textContent=this.value+'°C'"><span class="range-num">45°C</span></div></div>
-        <div class="s-row"><span class="s-label">Temp. máx 100% (°C)</span><div class="range-wrap"><input type="range" id="cfg-cool-max" min="50" max="80" step="1" value="70" oninput="this.nextElementSibling.textContent=this.value+'°C'"><span class="range-num">70°C</span></div></div>
-      </div>
-
-      <p class="section-label">🎥 Câmera & Tapo</p>
-      <div class="s-group">
-        <div class="s-row"><span class="s-label">Frames descartados</span><input type="number" id="cfg-cam-skip" class="s-val" value="5" min="3" max="15"></div>
-        <div class="s-row"><span class="s-label">Salvar foto no SD</span><label class="sw"><input type="checkbox" id="cfg-cam-save-sd" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-        <div class="s-row"><span class="s-label">Enviar foto para nuvem</span><label class="sw"><input type="checkbox" id="cfg-cam-upload" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
-        <div class="s-row"><span class="s-label">Duty cycle Tapo (%)</span><div class="range-wrap"><input type="range" id="cfg-tapo-duty" min="0" max="100" step="5" value="75" oninput="this.nextElementSibling.textContent=this.value+'%'"><span class="range-num">75%</span></div></div>
-        <div class="s-row"><span class="s-label">Ativação Tapo por evento</span><div class="range-wrap"><input type="range" id="cfg-tapo-active-s" min="10" max="300" step="10" value="60" oninput="this.nextElementSibling.textContent=this.value+'s'"><span class="range-num">60s</span></div></div>
-      </div>
-
-      <p class="section-label" style="color:var(--red);">🔒 Segurança</p>
-
-      <div class="s-group" style="border-color:rgba(255,69,58,.25);background:rgba(255,69,58,.05);">
-        <div class="s-row"><span class="s-label">Rotacionar segredo JWT</span>
-          <button onclick="if(confirm('Isso invalidará todos os QR Codes existentes. Continuar?'))sendCmd('CMD_ROTATE_JWT',0)" style="padding:9px 14px;background:rgba(255,69,58,.15);color:var(--red);border:1px solid rgba(255,69,58,.3);border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;">Rotacionar</button>
+          <p class="rc-sub">Entrada Externa</p>
+          <div class="rc-indicators">
+            <span class="rc-ind"><span class="rc-dot off" id="rc-p1-reed"></span>Reed</span>
+            <span class="rc-ind"><span class="rc-dot off" id="rc-p1-strike"></span>Strike</span>
+          </div>
+          <button class="rc-btn" id="rc-btn-p1">Acionar</button>
+        </div>
+        <div class="remote-card UNKNOWN" id="rc-p2">
+          <div class="rc-header">
+            <span class="rc-icon" aria-hidden="true">🚪</span>
+            <span class="rc-name">Porta P2</span>
+            <span class="rc-status">—</span>
+          </div>
+          <p class="rc-sub">Acesso Interno</p>
+          <div class="rc-indicators">
+            <span class="rc-ind"><span class="rc-dot off" id="rc-p2-reed"></span>Reed</span>
+            <span class="rc-ind"><span class="rc-dot off" id="rc-p2-strike"></span>Strike</span>
+          </div>
+          <button class="rc-btn" id="rc-btn-p2">Acionar</button>
+        </div>
+        <div class="remote-card UNKNOWN" id="rc-gate">
+          <div class="rc-header">
+            <span class="rc-icon" aria-hidden="true">🏠</span>
+            <span class="rc-name">Portão</span>
+            <span class="rc-status">—</span>
+          </div>
+          <p class="rc-sub">Garagem</p>
+          <div class="rc-indicators">
+            <span class="rc-ind"><span class="rc-dot off" id="rc-gate-reed"></span>Reed</span>
+            <span class="rc-ind"><span class="rc-dot off" id="rc-gate-relay"></span>Motor</span>
+          </div>
+          <button class="rc-btn" id="rc-btn-gate">Acionar</button>
+        </div>
+        <div class="rc-footer">
+          <span id="rc-age">Aguardando...</span>
+          <button class="rc-refresh" id="rc-refresh-btn">↺ Atualizar</button>
         </div>
       </div>
-
     </div>
-    <div class="save-bar">
-      <button class="btn-save" id="btn-save">Salvar Alterações</button>
+
+    <!-- WAITING PASS (v8) -->
+    <div id="view-WAITING_PASS" class="view" style="justify-content:center;text-align:center;">
+      <div style="
+        width:80px;height:80px;border-radius:50%;
+        background:var(--glass-bg-raised);
+        -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+        border:0.5px solid var(--glass-border);
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:var(--shadow-md),0 0 30px rgba(10,132,255,0.20);
+        margin-bottom:24px;position:relative;overflow:hidden;">
+        <div style="position:absolute;inset:0;border-radius:50%;background:var(--glass-specular);pointer-events:none;"></div>
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.8" style="position:relative;z-index:1;">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <h1 style="margin-bottom:8px;">Verificando Acesso</h1>
+      <p class="sub" style="margin-bottom:28px;">Digite sua senha no teclado físico</p>
+      <!-- Keypad dots — animated circles appear per keypress -->
+      <div id="keypad-dots" style="display:flex;gap:14px;margin-bottom:24px;min-height:24px;align-items:center;justify-content:center;"></div>
+      <div id="keypad-timer" style="font-size:12px;color:var(--muted);"></div>
     </div>
-  </div>
 
-
-  <!-- DETAILS -->
-  <div id="view-details" class="view">
-    <h1 id="det-title" style="width:100%;margin-bottom:4px;">Entrega Validada</h1>
-    <p style="color:var(--muted);font-size:14px;width:100%;margin-bottom:16px;">Comprovante Criptográfico</p>
-    <div class="badge">ASSINATURA VERIFICADA</div>
-    <div class="photo"><img id="det-photo" src="" alt="Pacote"></div>
-    <div class="receipt">
-      <div class="r-row"><span class="r-lbl">Transportadora</span><span class="r-val" id="det-carrier">—</span></div>
-      <div class="r-row"><span class="r-lbl">Peso</span><span class="r-val" id="det-weight">—</span></div>
-      <div class="r-row"><span class="r-lbl">Data/Hora</span><span class="r-val" id="det-date">—</span></div>
+    <!-- LOCKOUT KEYPAD (v8) -->
+    <div id="view-LOCKOUT_KEYPAD" class="view" style="justify-content:center;text-align:center;">
+      <div style="
+        width:80px;height:80px;border-radius:50%;
+        background:rgba(255,69,58,0.12);
+        -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+        border:0.5px solid rgba(255,69,58,0.35);
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:var(--shadow-md),0 0 30px rgba(255,69,58,0.20);
+        margin-bottom:24px;position:relative;overflow:hidden;">
+        <div style="position:absolute;inset:0;border-radius:50%;background:var(--glass-specular);pointer-events:none;"></div>
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.8" style="position:relative;z-index:1;">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h1 style="color:var(--red);margin-bottom:8px;">Teclado Bloqueado</h1>
+      <p class="sub" style="margin-bottom:20px;">Muitas tentativas incorretas</p>
+      <div id="lockout-countdown" style="
+        font-size:48px;font-weight:200;letter-spacing:-2px;
+        color:var(--fg);font-variant-numeric:tabular-nums;">--:--</div>
+      <p style="color:var(--muted);font-size:13px;margin-top:16px;">Aguarde o tempo de segurança</p>
     </div>
-    <button class="btn-back" id="btn-back-det">← Voltar</button>
-  </div>
 
-</div>
+    <!-- PWA INSTALL BANNER -->
+    <div id="pwa-banner" style="display:none;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <span style="font-size:30px;" aria-hidden="true">📲</span>
+        <div style="flex:1;">
+          <p style="font-size:14px;font-weight:600;margin-bottom:3px;color:var(--fg);">Adicione à Tela Inicial</p>
+          <p id="pwa-banner-hint" style="font-size:12px;color:var(--muted);">Safari → <b>⬆ Compartilhar</b> → "Adicionar à Tela de Início"</p>
+        </div>
+        <button id="pwa-banner-close"
+          style="background:rgba(255,255,255,0.12);border:0.5px solid rgba(255,255,255,0.18);
+                 color:var(--fg);font-size:16px;cursor:pointer;padding:0;
+                 width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;"
+          aria-label="Fechar">✕</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="view-settings" class="view">
+      <div class="settings-header">
+        <button class="back-btn" id="btn-back-dash" aria-label="Voltar">←</button>
+        <h1 style="font-size:22px;font-weight:700;letter-spacing:-.5px;">Configurações</h1>
+      </div>
+      <div class="settings-scroll">
+
+        <p class="section-label">Geral</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Modo Manutenção</span><label class="sw"><input type="checkbox" id="cfg-maint"><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Portaria 24 horas</span><label class="sw"><input type="checkbox" id="cfg-always-open" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Horário início (h)</span><input type="number" id="cfg-op-start" class="s-val" value="7" min="0" max="23"></div>
+          <div class="s-row"><span class="s-label">Horário fim (h)</span><input type="number" id="cfg-op-end" class="s-val" value="22" min="0" max="23"></div>
+        </div>
+
+        <p class="section-label">Porta P1 — Trava Externa</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Strike P1 habilitado</span><label class="sw"><input type="checkbox" id="cfg-strike-p1-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Pulso Strike P1</span><div class="range-wrap"><input type="range" id="cfg-door-open-ms" min="500" max="10000" step="100" value="3000" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">3000ms</span></div></div>
+          <div class="s-row"><span class="s-label">Timeout autorização</span><div class="range-wrap"><input type="range" id="cfg-auth-timeout" min="5000" max="30000" step="1000" value="10000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">10s</span></div></div>
+          <div class="s-row"><span class="s-label">Alerta P1 aberta</span><div class="range-wrap"><input type="range" id="cfg-door-alert-ms" min="30000" max="300000" step="5000" value="90000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">90s</span></div></div>
+          <div class="s-row"><span class="s-label">Alerta ciclos strike</span><input type="number" id="cfg-strike-cycle-alert" class="s-val" value="80000"></div>
+        </div>
+
+        <p class="section-label">Porta P2 — Trava Interna</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Strike P2 habilitado</span><label class="sw"><input type="checkbox" id="cfg-strike-p2-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Pulso Strike P2</span><div class="range-wrap"><input type="range" id="cfg-p2-open-ms" min="500" max="8000" step="100" value="3000" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">3000ms</span></div></div>
+          <div class="s-row"><span class="s-label">Delay P1 → P2</span><div class="range-wrap"><input type="range" id="cfg-p2-delay-ms" min="500" max="5000" step="100" value="2000" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">2000ms</span></div></div>
+          <div class="s-row"><span class="s-label">Janela acesso P2</span><div class="range-wrap"><input type="range" id="cfg-p2-window-ms" min="10000" max="120000" step="5000" value="30000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">30s</span></div></div>
+          <div class="s-row"><span class="s-label">Alerta P2 aberta</span><div class="range-wrap"><input type="range" id="cfg-p2-alert-ms" min="30000" max="300000" step="5000" value="60000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">60s</span></div></div>
+        </div>
+
+        <p class="section-label">Portão — Motor</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Portão habilitado</span><label class="sw"><input type="checkbox" id="cfg-gate-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Pulso botoeira (ms)</span><div class="range-wrap"><input type="range" id="cfg-gate-relay-ms" min="200" max="3000" step="50" value="500" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">500ms</span></div></div>
+          <div class="s-row"><span class="s-label">Alerta portão aberto</span><div class="range-wrap"><input type="range" id="cfg-gate-alert-ms" min="30000" max="600000" step="30000" value="120000" oninput="this.nextElementSibling.textContent=(this.value/60000).toFixed(1)+'min'"><span class="range-num">2.0min</span></div></div>
+          <div class="s-row"><span class="s-label">Fechar auto após entrada</span><label class="sw"><input type="checkbox" id="cfg-gate-auto-close"><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Delay fechar auto</span><div class="range-wrap"><input type="range" id="cfg-gate-close-delay" min="5000" max="60000" step="1000" value="15000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">15s</span></div></div>
+        </div>
+
+        <p class="section-label">Timers FSM</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Timeout AWAKE</span><div class="range-wrap"><input type="range" id="cfg-awake-ms" min="15000" max="120000" step="5000" value="60000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">60s</span></div></div>
+          <div class="s-row"><span class="s-label">Timeout QR Code</span><div class="range-wrap"><input type="range" id="cfg-qr-ms" min="10000" max="60000" step="5000" value="30000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">30s</span></div></div>
+          <div class="s-row"><span class="s-label">Timeout INSIDE_WAIT</span><div class="range-wrap"><input type="range" id="cfg-inside-ms" min="60000" max="600000" step="30000" value="180000" oninput="this.nextElementSibling.textContent=(this.value/60000).toFixed(1)+'min'"><span class="range-num">3.0min</span></div></div>
+          <div class="s-row"><span class="s-label">Exibição comprovante</span><div class="range-wrap"><input type="range" id="cfg-receipt-ms" min="30000" max="300000" step="10000" value="120000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">120s</span></div></div>
+        </div>
+
+        <p class="section-label">Balança (HX711)</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Peso mínimo entrega (g)</span><div class="range-wrap"><input type="range" id="cfg-min-w-g" min="20" max="500" step="10" value="50" oninput="this.nextElementSibling.textContent=this.value+'g'"><span class="range-num">50g</span></div></div>
+          <div class="s-row"><span class="s-label">Drift auto-zero (g)</span><div class="range-wrap"><input type="range" id="cfg-az-max" min="5" max="200" step="5" value="50" oninput="this.nextElementSibling.textContent=this.value+'g'"><span class="range-num">50g</span></div></div>
+          <div class="s-row"><span class="s-label">Peso de referência (g)</span><input type="number" id="cfg-cal-weight" class="s-val" value="1000"></div>
+          <div class="s-row" style="justify-content:flex-end;gap:10px;">
+            <button onclick="sendCmd('CMD_TARE_SCALE',0)" class="s-action-btn" style="color:var(--blue);border-color:rgba(10,132,255,0.30);background:rgba(10,132,255,0.10);">⚖️ Tarar</button>
+            <button onclick="sendCmd('CMD_CALIBRATE_SCALE',document.getElementById('cfg-cal-weight').value)" class="s-action-btn" style="color:var(--green);border-color:rgba(48,209,88,0.30);background:rgba(48,209,88,0.10);">📐 Calibrar</button>
+          </div>
+        </div>
+
+        <p class="section-label">INA219 — Corrente</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Mín Strike P1 (mA)</span><div class="range-wrap"><input type="range" id="cfg-ina-min" min="100" max="800" step="25" value="400" oninput="this.nextElementSibling.textContent=this.value+'mA'"><span class="range-num">400mA</span></div></div>
+          <div class="s-row"><span class="s-label">Máx Strike P1 (mA)</span><div class="range-wrap"><input type="range" id="cfg-ina-max" min="500" max="2000" step="50" value="1200" oninput="this.nextElementSibling.textContent=this.value+'mA'"><span class="range-num">1200mA</span></div></div>
+          <div class="s-row"><span class="s-label">Mín Strike P2 (mA)</span><div class="range-wrap"><input type="range" id="cfg-ina-p2-min" min="100" max="800" step="25" value="400" oninput="this.nextElementSibling.textContent=this.value+'mA'"><span class="range-num">400mA</span></div></div>
+          <div class="s-row"><span class="s-label">Máx Strike P2 (mA)</span><div class="range-wrap"><input type="range" id="cfg-ina-p2-max" min="500" max="2000" step="50" value="1200" oninput="this.nextElementSibling.textContent=this.value+'mA'"><span class="range-num">1200mA</span></div></div>
+        </div>
+
+        <p class="section-label">LED & Buzzer</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Brilho LED máx</span><div class="range-wrap"><input type="range" id="cfg-led-btn-max" min="50" max="255" step="5" value="200" oninput="this.nextElementSibling.textContent=this.value"><span class="range-num">200</span></div></div>
+          <div class="s-row"><span class="s-label">Período breathing (ms)</span><div class="range-wrap"><input type="range" id="cfg-led-breathe" min="500" max="5000" step="100" value="2000" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">2000ms</span></div></div>
+          <div class="s-row"><span class="s-label">Buzzer habilitado</span><label class="sw"><input type="checkbox" id="cfg-buzzer-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Duração bipe (ms)</span><div class="range-wrap"><input type="range" id="cfg-buzzer-ms" min="50" max="500" step="25" value="100" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">100ms</span></div></div>
+          <div class="s-row"><span class="s-label">Silenciar fora horário</span><label class="sw"><input type="checkbox" id="cfg-buzzer-silent"><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+        </div>
+
+        <p class="section-label">Teclado & Acesso</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Tentativas antes bloqueio</span><input type="number" id="cfg-kp-max-fails" class="s-val" value="5" min="3" max="10"></div>
+          <div class="s-row"><span class="s-label">Duração bloqueio (s)</span><input type="number" id="cfg-kp-lockout-s" class="s-val" value="600"></div>
+          <div class="s-row" style="justify-content:flex-end;">
+            <button onclick="sendCmd('CMD_RESET_KEYPAD_LOCKOUT',0)" class="s-action-btn" style="color:var(--red);border-color:rgba(255,69,58,0.30);background:rgba(255,69,58,0.10);">🔓 Resetar Bloqueio</button>
+          </div>
+        </div>
+
+        <p class="section-label">Radar de Presença (mmWave)</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Debounce presença (ms)</span><div class="range-wrap"><input type="range" id="cfg-radar-dbc" min="500" max="5000" step="100" value="1500" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">1500ms</span></div></div>
+          <div class="s-row"><span class="s-label">Exigir radar vazio</span><label class="sw"><input type="checkbox" id="cfg-mmw-req" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Alerta loitering</span><label class="sw"><input type="checkbox" id="cfg-loiter-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Tempo loitering</span><div class="range-wrap"><input type="range" id="cfg-loiter-ms" min="10000" max="120000" step="5000" value="30000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">30s</span></div></div>
+          <div class="s-row"><span class="s-label">Stale data máx (ms)</span><div class="range-wrap"><input type="range" id="cfg-stale-ms" min="50" max="500" step="25" value="150" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">150ms</span></div></div>
+          <details style="width:100%;padding:12px 0;position:relative;z-index:1;">
+            <summary style="font-size:13px;color:var(--muted);cursor:pointer;list-style:none;-webkit-appearance:none;">▶ Gates de distância (avançado)</summary>
+            <div style="margin-top:12px;"><div id="mmw-gates"></div></div>
+          </details>
+        </div>
+
+        <p class="section-label">Cooler (Controle Térmico)</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Controle automático</span><label class="sw"><input type="checkbox" id="cfg-cooler-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Temp. início (°C)</span><div class="range-wrap"><input type="range" id="cfg-cool-min" min="35" max="60" step="1" value="45" oninput="this.nextElementSibling.textContent=this.value+'°C'"><span class="range-num">45°C</span></div></div>
+          <div class="s-row"><span class="s-label">Temp. máx 100% (°C)</span><div class="range-wrap"><input type="range" id="cfg-cool-max" min="50" max="80" step="1" value="70" oninput="this.nextElementSibling.textContent=this.value+'°C'"><span class="range-num">70°C</span></div></div>
+        </div>
+
+        <p class="section-label">Câmera & Tapo</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Frames descartados</span><input type="number" id="cfg-cam-skip" class="s-val" value="5" min="3" max="15"></div>
+          <div class="s-row"><span class="s-label">Salvar foto no SD</span><label class="sw"><input type="checkbox" id="cfg-cam-save-sd" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Enviar foto para nuvem</span><label class="sw"><input type="checkbox" id="cfg-cam-upload" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Duty cycle Tapo (%)</span><div class="range-wrap"><input type="range" id="cfg-tapo-duty" min="0" max="100" step="5" value="75" oninput="this.nextElementSibling.textContent=this.value+'%'"><span class="range-num">75%</span></div></div>
+          <div class="s-row"><span class="s-label">Ativação Tapo por evento</span><div class="range-wrap"><input type="range" id="cfg-tapo-active-s" min="10" max="300" step="10" value="60" oninput="this.nextElementSibling.textContent=this.value+'s'"><span class="range-num">60s</span></div></div>
+        </div>
+
+        <p class="section-label" style="color:var(--red);">Segurança</p>
+        <div class="s-group" style="border-color:rgba(255,69,58,0.25);background:rgba(255,69,58,0.06);">
+          <div class="s-row"><span class="s-label">Rotacionar segredo JWT</span>
+            <button onclick="if(confirm('Isso invalidará todos os QR Codes existentes. Continuar?'))sendCmd('CMD_ROTATE_JWT',0)" class="s-action-btn" style="color:var(--red);border-color:rgba(255,69,58,0.30);background:rgba(255,69,58,0.10);">Rotacionar</button>
+          </div>
+        </div>
+
+      </div>
+      <div class="save-bar">
+        <button class="btn-save" id="btn-save">Salvar Alterações</button>
+      </div>
+    </div>
+
+    <!-- DETAILS -->
+    <div id="view-details" class="view">
+      <h1 id="det-title" style="width:100%;margin-bottom:4px;font-size:28px;letter-spacing:-.7px;">Entrega Validada</h1>
+      <p style="color:var(--muted);font-size:14px;width:100%;margin-bottom:18px;">Comprovante Criptográfico</p>
+      <div class="badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        Assinatura Verificada
+      </div>
+      <div class="photo"><img id="det-photo" src="" alt="Pacote" loading="lazy"></div>
+      <div class="receipt">
+        <div class="r-row"><span class="r-lbl">Transportadora</span><span class="r-val" id="det-carrier">—</span></div>
+        <div class="r-row"><span class="r-lbl">Peso</span><span class="r-val" id="det-weight">—</span></div>
+        <div class="r-row" style="border-bottom:none;"><span class="r-lbl">Data/Hora</span><span class="r-val" id="det-date">—</span></div>
+      </div>
+      <button class="btn-back" id="btn-back-det">← Voltar</button>
+    </div>
+
+  </div><!-- /panel-content -->
+</div><!-- /panel -->
 
 <script type="module" src="app.js"></script>
 </body>
