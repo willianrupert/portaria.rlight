@@ -42,14 +42,23 @@ function err(msg) { document.getElementById('err').textContent = msg || ''; }
 window._resetAuth = () => { sessionStorage.clear(); location.reload(); };
 
 // ── WebSocket (Host OPi) ───────────────────────────
-const socket = new WebSocket('ws://' + location.hostname + ':3006');
+let socket = null;
+const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.startsWith('192.168.');
 
-socket.onmessage = (event) => {
+if (isLocal) {
   try {
-    const data = JSON.parse(event.data);
-    handleMessage(data);
-  } catch (e) { console.error('WS parse error:', e); }
-};
+    socket = new WebSocket('ws://' + location.hostname + ':3006');
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleMessage(data);
+      } catch (e) { console.error('WS parse error:', e); }
+    };
+    socket.onerror = () => console.warn('WebSocket error (OPi offline?)');
+  } catch (e) {
+    console.error('WebSocket initialization failed:', e);
+  }
+}
 
 function handleMessage(data) {
   if (data.type === 'state_change') {
@@ -77,10 +86,11 @@ function handleMessage(data) {
     // Se estiver em uma tela de 'view-' (PWA Admin), não forçamos a mudança de tela do Kiosk
     // exceto se for um estado crítico ou se o usuário quiser.
     // Mas para o Kiosk (localhost), trocamos a tela:
-    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    if (isLocal) {
        if (state === 'WAITING_PASS') {
          keypadAsterisks = 0;
-         document.getElementById('keypad-dots').innerHTML = '';
+         const dots = document.getElementById('keypad-dots');
+         if (dots) dots.innerHTML = '';
        }
        if (state === 'LOCKOUT_KEYPAD') startLockoutCountdown(600); // 10 min default
        show(state);
@@ -381,6 +391,8 @@ document.getElementById('btn-login').onclick = function() {
   const p = new URLSearchParams(location.search);
   const tok = p.get('token') || p.get('id');
   if (tok) verifyReceipt(tok);
+
+  window.RLIGHT_BOOTED = true;
 })();
 
 // ── Data ───────────────────────────────────────────
