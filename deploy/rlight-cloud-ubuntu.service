@@ -1,0 +1,15 @@
+[Unit]
+Description=RLight Portaria v8 Cloud Backend
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/cloud_backend
+EnvironmentFile=/home/ubuntu/cloud_backend/.env
+ExecStart=/usr/bin/node /home/ubuntu/cloud_backend/server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

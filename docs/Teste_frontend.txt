@@ -1,0 +1,1245 @@
+Implement in cloud_backend>public these new style.css and index.html
+cat > /mnt/user-data/outputs/style.css << 'CSSEOF'
+/* ═══════════════════════════════════════════════════════════════════
+   RLight PWA — Apple Liquid Glass Design System
+   Tested: iPhone 16 Pro, iOS 18+, Safari PWA standalone
+   
+   Architecture:
+   - Animated mesh gradient background (3 orbs, GPU-composited)
+   - True glass panels: backdrop-filter blur + saturation + brightness
+   - Inner specular highlight via pseudo-elements (refraction sim)
+   - Border: 0.5px white gradient for edge catch light
+   - All layout: 100vh absolute — zero relative height hacks
+   ═══════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Apple system palette — exact values from HIG */
+  --blue:    #0A84FF;
+  --green:   #30D158;
+  --red:     #FF453A;
+  --orange:  #FF9F0A;
+  --indigo:  #5E5CE6;
+  --muted:   rgba(255,255,255,0.45);
+  --fg:      rgba(255,255,255,0.95);
+
+  /* Glass material tokens */
+  --glass-bg:         rgba(255,255,255,0.07);
+  --glass-bg-raised:  rgba(255,255,255,0.11);
+  --glass-bg-heavy:   rgba(255,255,255,0.16);
+  --glass-border:     rgba(255,255,255,0.18);
+  --glass-border-dim: rgba(255,255,255,0.08);
+  --glass-blur:       saturate(180%) blur(28px);
+  --glass-blur-heavy: saturate(200%) blur(40px);
+  --glass-specular:   linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.00) 100%);
+
+  /* Shadow */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.15);
+  --shadow-md: 0 8px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.20);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.45), 0 4px 16px rgba(0,0,0,0.25);
+
+  /* Typography */
+  --font: -apple-system, 'SF Pro Display', 'SF Pro Text', BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --font-rounded: -apple-system, 'SF Pro Rounded', BlinkMacSystemFont, sans-serif;
+
+  /* Easing — Apple spring curves */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Light mode */
+@media (prefers-color-scheme: light) {
+  :root {
+    --glass-bg:         rgba(255,255,255,0.55);
+    --glass-bg-raised:  rgba(255,255,255,0.70);
+    --glass-bg-heavy:   rgba(255,255,255,0.82);
+    --glass-border:     rgba(255,255,255,0.90);
+    --glass-border-dim: rgba(0,0,0,0.07);
+    --glass-specular:   linear-gradient(135deg, rgba(255,255,255,0.80) 0%, rgba(255,255,255,0.30) 50%, rgba(255,255,255,0.00) 100%);
+    --fg:      rgba(0,0,0,0.90);
+    --muted:   rgba(0,0,0,0.45);
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.07);
+    --shadow-lg: 0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.08);
+  }
+  html { background: #E8E8F0; }
+}
+
+/* ── Reset ──────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Root layout ────────────────────────────────────────────────── */
+html {
+  height: 100vh;
+  overflow: hidden;
+  background: #0A0A1A;
+  font-family: var(--font);
+  color: var(--fg);
+}
+
+body {
+  min-height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Animated mesh background ───────────────────────────────────── */
+/* Three large orbs: blue/indigo, purple, teal — drift slowly */
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #0A0A18;
+}
+@media (prefers-color-scheme: light) {
+  .bg { background: #CDD0E8; }
+}
+
+.bg::before,
+.bg::after,
+.bg-orb {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  /* Use will-change to keep on GPU, avoid repaints */
+  will-change: transform;
+  filter: blur(70px);
+}
+
+.bg::before {
+  width: 520px; height: 520px;
+  top: -120px; left: -80px;
+  background: radial-gradient(circle, rgba(88,70,245,0.55) 0%, rgba(10,132,255,0.25) 55%, transparent 75%);
+  animation: orb-drift-1 18s ease-in-out infinite alternate;
+}
+
+.bg::after {
+  width: 420px; height: 420px;
+  bottom: -80px; right: -60px;
+  background: radial-gradient(circle, rgba(48,209,88,0.30) 0%, rgba(10,200,200,0.18) 55%, transparent 75%);
+  animation: orb-drift-2 22s ease-in-out infinite alternate;
+}
+
+.bg-orb {
+  width: 360px; height: 360px;
+  bottom: 30%; right: -40px;
+  background: radial-gradient(circle, rgba(255,69,58,0.22) 0%, rgba(255,159,10,0.15) 55%, transparent 75%);
+  animation: orb-drift-3 26s ease-in-out infinite alternate;
+}
+
+@keyframes orb-drift-1 {
+  from { transform: translate(0px, 0px) scale(1); }
+  to   { transform: translate(60px, 80px) scale(1.15); }
+}
+@keyframes orb-drift-2 {
+  from { transform: translate(0px, 0px) scale(1); }
+  to   { transform: translate(-50px, -60px) scale(1.10); }
+}
+@keyframes orb-drift-3 {
+  from { transform: translate(0px, 0px) scale(1); }
+  to   { transform: translate(-80px, 40px) scale(1.20); }
+}
+
+/* ── Panel — main glass container ────────────────────────────────── */
+.panel {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.panel-content {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+
+  /* THE glass effect — backdrop-filter does the heavy lifting */
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  /* Safe area — fullscreen iOS */
+  padding-top: max(54px, env(safe-area-inset-top));
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+  padding-left: max(20px, env(safe-area-inset-left));
+  padding-right: max(20px, env(safe-area-inset-right));
+}
+.panel-content::-webkit-scrollbar { display: none; }
+
+/* Specular top edge — simulates the refracted light line */
+.panel-content::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255,255,255,0.35) 30%,
+    rgba(255,255,255,0.55) 50%,
+    rgba(255,255,255,0.35) 70%,
+    transparent 100%
+  );
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ── Desktop shell (≥ 601px) ──────────────────────────────────────── */
+@media (min-width: 601px) {
+  html { height: auto; overflow: auto; background: #13132A; }
+  body { min-height: 100vh; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 32px; }
+  .bg { position: fixed; }
+  .panel {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    max-width: 390px;
+    height: 820px;
+    border-radius: 52px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255,255,255,0.20);
+  }
+  .panel-content {
+    border-radius: 52px;
+    padding: 40px 28px;
+  }
+  .panel-content::before { display: none; }
+}
+
+/* ── Views — page transitions ─────────────────────────────────────── */
+.view {
+  display: none;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+.view.active {
+  display: flex;
+  animation: view-enter 0.4s var(--ease-out) both;
+}
+@keyframes view-enter {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Glass card — core reusable component ────────────────────────── */
+/* Usage: any surface that needs glass material */
+.glass {
+  background: var(--glass-bg-raised);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 0.5px solid var(--glass-border);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Specular highlight pseudo — top-left catch light */
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-specular);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* All direct children above the specular */
+.glass > * { position: relative; z-index: 1; }
+
+/* ── Loading ─────────────────────────────────────────────────────── */
+#view-loading {
+  justify-content: center;
+  gap: 20px;
+}
+
+.spin {
+  width: 32px; height: 32px;
+  border: 2.5px solid rgba(255,255,255,0.15);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Login ──────────────────────────────────────────────────────── */
+#view-login { justify-content: center; gap: 0; }
+
+.shield {
+  color: var(--blue);
+  margin-bottom: 24px;
+  filter: drop-shadow(0 0 20px rgba(10,132,255,0.40));
+  animation: shield-pulse 3s ease-in-out infinite;
+}
+@keyframes shield-pulse {
+  0%,100% { filter: drop-shadow(0 0 16px rgba(10,132,255,0.30)); }
+  50%      { filter: drop-shadow(0 0 28px rgba(10,132,255,0.55)); }
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+  margin-bottom: 8px;
+  color: var(--fg);
+}
+
+.sub {
+  color: var(--muted);
+  font-size: 15px;
+  margin-bottom: 36px;
+  text-align: center;
+}
+
+/* Google sign-in button — glass style */
+.btn-g {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--glass-bg-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  backdrop-filter: var(--glass-blur-heavy);
+  border: 0.5px solid var(--glass-border);
+  color: var(--fg);
+  padding: 16px;
+  border-radius: 16px;
+  font-size: 17px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s var(--spring), box-shadow 0.18s ease;
+}
+.btn-g::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--glass-specular);
+  pointer-events: none;
+}
+.btn-g:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+#err {
+  color: var(--red);
+  font-size: 13px;
+  text-align: center;
+  min-height: 18px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.reset {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255,255,255,0.20);
+  padding-bottom: 1px;
+  transition: color 0.2s;
+}
+.reset:active { color: var(--fg); }
+
+/* ── Dashboard ──────────────────────────────────────────────────── */
+#view-dashboard { align-items: flex-start; padding-top: 8px; }
+
+.dash-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+#greeting {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.9px;
+  color: var(--fg);
+}
+
+.dash-subtitle {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Circular glass icon button */
+.gear-btn {
+  background: var(--glass-bg-raised);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 0.5px solid var(--glass-border);
+  color: var(--fg);
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s var(--spring), background 0.2s;
+}
+.gear-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--glass-specular);
+  pointer-events: none;
+}
+.gear-btn:active { transform: scale(0.92); }
+
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 28px 0 12px;
+  width: 100%;
+}
+
+/* Delivery card */
+.card {
+  width: 100%;
+  background: var(--glass-bg-raised);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 0.5px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s var(--spring), box-shadow 0.18s ease;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-specular);
+  pointer-events: none;
+}
+.card:active { transform: scale(0.98); box-shadow: none; }
+.card > * { position: relative; z-index: 1; }
+
+.card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-title { font-size: 15px; font-weight: 600; color: var(--fg); }
+.card-meta  { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.card-val   { font-size: 14px; font-weight: 600; color: var(--green); }
+
+.btn-logout {
+  width: 100%;
+  margin-top: 24px;
+  background: rgba(255,69,58,0.10);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255,69,58,0.30);
+  color: var(--red);
+  border-radius: 16px;
+  padding: 15px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: transform 0.18s var(--spring), background 0.2s;
+}
+.btn-logout:active { transform: scale(0.98); background: rgba(255,69,58,0.18); }
+
+/* ── Settings ───────────────────────────────────────────────────── */
+#view-settings { align-items: flex-start; }
+
+.settings-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.back-btn {
+  background: var(--glass-bg-raised);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 0.5px solid var(--glass-border);
+  color: var(--fg);
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s var(--spring);
+}
+.back-btn:active { transform: scale(0.90); }
+
+.settings-scroll {
+  width: 100%;
+  overflow-y: auto;
+  flex: 1;
+  padding-bottom: 110px;
+}
+.settings-scroll::-webkit-scrollbar { display: none; }
+
+/* Settings group — the inset grouped list style from iOS Settings */
+.s-group {
+  background: var(--glass-bg-raised);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 0.5px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 0 16px;
+  margin-bottom: 8px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.s-group::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-specular);
+  pointer-events: none;
+  z-index: 0;
+}
+.s-group > * { position: relative; z-index: 1; }
+
+.s-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 0.5px solid var(--glass-border-dim);
+}
+.s-row:last-child { border-bottom: none; }
+.s-label { font-size: 15px; color: var(--fg); }
+.s-val { color: var(--blue); font-size: 15px; font-weight: 600; text-align: right; }
+input[type=number].s-val { background: none; border: none; outline: none; width: 72px; font-family: var(--font); }
+
+/* iOS-exact Toggle Switch */
+.sw { position: relative; width: 51px; height: 31px; flex-shrink: 0; cursor: pointer; }
+.sw input { opacity: 0; width: 0; height: 0; }
+.sw-track {
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.15);
+  border-radius: 34px;
+  transition: background 0.28s ease;
+  border: 0.5px solid rgba(255,255,255,0.10);
+}
+.sw input:checked ~ .sw-track { background: var(--green); border-color: transparent; }
+.sw-thumb {
+  position: absolute;
+  width: 27px; height: 27px;
+  background: #fff;
+  border-radius: 50%;
+  top: 2px; left: 2px;
+  transition: transform 0.28s var(--spring);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
+}
+.sw input:checked ~ .sw-thumb { transform: translateX(20px); }
+
+/* Range slider — iOS feel */
+.range-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  justify-content: flex-end;
+}
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 110px;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.15);
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px; height: 26px;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.30), 0 0 0 0.5px rgba(0,0,0,0.12);
+  transition: transform 0.15s var(--spring);
+}
+input[type=range]:active::-webkit-slider-thumb { transform: scale(1.12); }
+input[type=range]::-moz-range-thumb {
+  width: 26px; height: 26px;
+  background: #fff; border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.30);
+}
+.range-num { font-size: 13px; color: var(--blue); font-weight: 600; min-width: 48px; text-align: right; }
+
+/* Save bar — frosted bottom bar */
+.save-bar {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  padding: 20px 0 4px;
+  background: linear-gradient(to top, rgba(10,10,24,0.85) 0%, rgba(10,10,24,0.60) 60%, transparent 100%);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+@media (prefers-color-scheme: light) {
+  .save-bar {
+    background: linear-gradient(to top, rgba(200,200,220,0.85) 0%, rgba(200,200,220,0.60) 60%, transparent 100%);
+  }
+}
+
+.btn-save {
+  width: 100%;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  padding: 16px;
+  border-radius: 16px;
+  font-size: 17px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(10,132,255,0.40);
+  transition: transform 0.18s var(--spring), box-shadow 0.18s ease;
+}
+.btn-save:active { transform: scale(0.98); box-shadow: 0 2px 8px rgba(10,132,255,0.25); }
+
+/* ── Details ─────────────────────────────────────────────────────── */
+#view-details { align-items: flex-start; }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  background: rgba(48,209,88,0.15);
+  color: var(--green);
+  border: 0.5px solid rgba(48,209,88,0.30);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.photo {
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: var(--glass-bg-raised);
+  border-radius: 20px;
+  overflow: hidden;
+  border: 0.5px solid var(--glass-border);
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-md);
+}
+.photo img { width: 100%; height: 100%; object-fit: cover; }
+
+.receipt {
+  width: 100%;
+  background: var(--glass-bg-raised);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 0.5px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.receipt::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-specular);
+  pointer-events: none;
+}
+.receipt > * { position: relative; z-index: 1; }
+
+.r-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  padding: 7px 0;
+  border-bottom: 0.5px solid var(--glass-border-dim);
+}
+.r-row:last-child { border-bottom: none; }
+.r-lbl { color: var(--muted); }
+.r-val { font-weight: 500; color: var(--fg); }
+
+.btn-back {
+  width: 100%;
+  margin-top: 20px;
+  background: var(--glass-bg-raised);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  color: var(--fg);
+  border: 0.5px solid var(--glass-border);
+  padding: 15px;
+  border-radius: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s var(--spring);
+}
+.btn-back:active { transform: scale(0.98); }
+
+/* ── Remote Control ──────────────────────────────────────────────── */
+#view-remote { align-items: flex-start; }
+
+.remote-card {
+  width: 100%;
+  border-radius: 22px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s var(--spring), box-shadow 0.2s ease;
+}
+.remote-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-specular);
+  pointer-events: none;
+}
+.remote-card > * { position: relative; z-index: 1; }
+
+.remote-card.CLOSED   { background: rgba(48,209,88,0.09);  border: 0.5px solid rgba(48,209,88,0.30); }
+.remote-card.ACTUATING{ background: rgba(255,214,10,0.09); border: 0.5px solid rgba(255,214,10,0.35); }
+.remote-card.OPEN {
+  background: rgba(255,69,58,0.11);
+  border: 0.5px solid rgba(255,69,58,0.40);
+  animation: pulse-red 1.8s ease-in-out infinite;
+}
+.remote-card.UNKNOWN  { background: var(--glass-bg-raised); border: 0.5px solid var(--glass-border); }
+
+@keyframes pulse-red {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,69,58,0.25), var(--shadow-sm); }
+  50%      { box-shadow: 0 0 0 10px rgba(255,69,58,0.00), var(--shadow-sm); }
+}
+
+.rc-header  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.rc-icon    { font-size: 22px; }
+.rc-name    { font-size: 16px; font-weight: 700; flex: 1; margin-left: 10px; color: var(--fg); }
+.rc-status  { font-size: 13px; font-weight: 600; }
+.CLOSED   .rc-status { color: var(--green); }
+.ACTUATING .rc-status { color: #FFD60A; }
+.OPEN     .rc-status { color: var(--red); }
+.UNKNOWN  .rc-status { color: var(--muted); }
+
+.rc-sub         { font-size: 12px; color: var(--muted); margin-left: 32px; margin-bottom: 10px; }
+.rc-indicators  { display: flex; gap: 16px; margin-left: 32px; margin-bottom: 12px; }
+.rc-ind         { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+.rc-dot         { width: 8px; height: 8px; border-radius: 50%; display: inline-block; transition: background 0.3s; }
+.rc-dot.on      { background: var(--green); box-shadow: 0 0 6px rgba(48,209,88,0.60); }
+.rc-dot.off     { background: rgba(255,255,255,0.15); }
+
+.rc-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: transform 0.18s var(--spring), opacity 0.2s;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.rc-btn:active { transform: scale(0.97); opacity: 0.85; }
+.CLOSED   .rc-btn { background: rgba(48,209,88,0.18);  color: var(--green); }
+.ACTUATING .rc-btn { background: rgba(255,255,255,0.06); color: var(--muted); cursor: not-allowed; }
+.OPEN     .rc-btn { background: rgba(255,69,58,0.15);  color: var(--red); }
+.UNKNOWN  .rc-btn { background: var(--glass-bg);        color: var(--muted); }
+
+.rc-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  width: 100%;
+}
+.rc-refresh {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--font);
+}
+
+/* ── PWA Install Banner ───────────────────────────────────────────── */
+#pwa-banner {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 100;
+  background: rgba(18,18,32,0.88);
+  -webkit-backdrop-filter: saturate(180%) blur(40px);
+  backdrop-filter: saturate(180%) blur(40px);
+  border-top: 0.5px solid rgba(255,255,255,0.15);
+  padding: 18px 20px;
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+  animation: banner-up 0.4s var(--ease-out) both;
+}
+@keyframes banner-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ── Tap feedback — system-wide ───────────────────────────────────── */
+button, .card, .gear-btn, .back-btn, .btn-g, .rc-btn {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── Typography hierarchy ─────────────────────────────────────────── */
+h1 { font-family: var(--font); }
+
+/* Section headers in settings — matches iOS grouped table style */
+.settings-scroll .section-label {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 28px 0 8px 4px;
+}
+
+/* Inline action buttons in settings */
+.s-action-btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  border: 0.5px solid;
+  background: transparent;
+  transition: opacity 0.2s;
+}
+.s-action-btn:active { opacity: 0.65; }
+CSSEOF
+echo "style.css done"
+
+cat > /mnt/user-data/outputs/index.html << 'HTMLEOF'
+<!DOCTYPE html>
+<!-- RLight Portaria v8.4 — Apple Liquid Glass -->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="rlight">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/favicon_v2.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0A0A18" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#CDD0E8" media="(prefers-color-scheme: light)">
+<title>rlight — Portaria</title>
+<link rel="icon" type="image/png" href="/favicon_v2.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Animated mesh background -->
+<div class="bg">
+  <div class="bg-orb"></div>
+</div>
+
+<div class="panel">
+  <div class="panel-content">
+
+    <!-- LOADING -->
+    <div id="view-loading" class="view active">
+      <div class="spin"></div>
+      <p style="color:var(--muted);font-size:14px;font-weight:500;letter-spacing:0.01em;">Verificando sessão</p>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="view-login" class="view">
+      <svg class="shield" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="M9 12l2 2 4-4" stroke-width="1.8"/>
+      </svg>
+      <h1>Acesso Restrito</h1>
+      <p class="sub">Portaria Digital RLight</p>
+      <div id="err"></div>
+      <button class="btn-g" id="btn-login">
+        <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink:0">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Entrar com Google
+      </button>
+      <span class="reset" onclick="window._resetAuth()">Problemas no login? Toque aqui</span>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="view-dashboard" class="view">
+      <div class="dash-header">
+        <div>
+          <div id="greeting" style="font-size:34px;font-weight:700;letter-spacing:-.9px;">Olá</div>
+          <p class="dash-subtitle">Portaria RLight</p>
+        </div>
+        <div class="header-actions">
+          <button class="gear-btn" id="btn-remote" title="Controle Remoto" aria-label="Controle Remoto">
+            <!-- Signal/wifi icon — remote control -->
+            <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+              <path d="M4 15C4 10 7.1 7 11 7C14.9 7 18 10 18 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M7 15C7 11.7 8.8 9.5 11 9.5C13.2 9.5 15 11.7 15 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="11" cy="15.5" r="1.5" fill="currentColor"/>
+            </svg>
+          </button>
+          <button class="gear-btn" id="btn-settings" aria-label="Configurações">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <p class="section-label" style="margin-top:24px;">Entregas Recentes</p>
+      <div id="history-list" style="width:100%;"></div>
+      <button class="btn-logout" id="btn-logout">Encerrar Sessão</button>
+    </div>
+
+    <!-- REMOTE CONTROL -->
+    <div id="view-remote" class="view">
+      <div class="settings-header">
+        <button class="back-btn" id="btn-back-remote" aria-label="Voltar">←</button>
+        <h1 style="font-size:22px;font-weight:700;letter-spacing:-.5px;">Controle Remoto</h1>
+      </div>
+      <div style="width:100%;">
+        <div class="remote-card UNKNOWN" id="rc-p1">
+          <div class="rc-header">
+            <span class="rc-icon" aria-hidden="true">🔒</span>
+            <span class="rc-name">Porta P1</span>
+            <span class="rc-status">—</span>
+          </div>
+          <p class="rc-sub">Entrada Externa</p>
+          <div class="rc-indicators">
+            <span class="rc-ind"><span class="rc-dot off" id="rc-p1-reed"></span>Reed</span>
+            <span class="rc-ind"><span class="rc-dot off" id="rc-p1-strike"></span>Strike</span>
+          </div>
+          <button class="rc-btn" id="rc-btn-p1">Acionar</button>
+        </div>
+        <div class="remote-card UNKNOWN" id="rc-p2">
+          <div class="rc-header">
+            <span class="rc-icon" aria-hidden="true">🚪</span>
+            <span class="rc-name">Porta P2</span>
+            <span class="rc-status">—</span>
+          </div>
+          <p class="rc-sub">Acesso Interno</p>
+          <div class="rc-indicators">
+            <span class="rc-ind"><span class="rc-dot off" id="rc-p2-reed"></span>Reed</span>
+            <span class="rc-ind"><span class="rc-dot off" id="rc-p2-strike"></span>Strike</span>
+          </div>
+          <button class="rc-btn" id="rc-btn-p2">Acionar</button>
+        </div>
+        <div class="remote-card UNKNOWN" id="rc-gate">
+          <div class="rc-header">
+            <span class="rc-icon" aria-hidden="true">🏠</span>
+            <span class="rc-name">Portão</span>
+            <span class="rc-status">—</span>
+          </div>
+          <p class="rc-sub">Garagem</p>
+          <div class="rc-indicators">
+            <span class="rc-ind"><span class="rc-dot off" id="rc-gate-reed"></span>Reed</span>
+            <span class="rc-ind"><span class="rc-dot off" id="rc-gate-relay"></span>Motor</span>
+          </div>
+          <button class="rc-btn" id="rc-btn-gate">Acionar</button>
+        </div>
+        <div class="rc-footer">
+          <span id="rc-age">Aguardando...</span>
+          <button class="rc-refresh" id="rc-refresh-btn">↺ Atualizar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- WAITING PASS (v8) -->
+    <div id="view-WAITING_PASS" class="view" style="justify-content:center;text-align:center;">
+      <div style="
+        width:80px;height:80px;border-radius:50%;
+        background:var(--glass-bg-raised);
+        -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+        border:0.5px solid var(--glass-border);
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:var(--shadow-md),0 0 30px rgba(10,132,255,0.20);
+        margin-bottom:24px;position:relative;overflow:hidden;">
+        <div style="position:absolute;inset:0;border-radius:50%;background:var(--glass-specular);pointer-events:none;"></div>
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.8" style="position:relative;z-index:1;">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <h1 style="margin-bottom:8px;">Verificando Acesso</h1>
+      <p class="sub" style="margin-bottom:28px;">Digite sua senha no teclado físico</p>
+      <!-- Keypad dots — animated circles appear per keypress -->
+      <div id="keypad-dots" style="display:flex;gap:14px;margin-bottom:24px;min-height:24px;align-items:center;justify-content:center;"></div>
+      <div id="keypad-timer" style="font-size:12px;color:var(--muted);"></div>
+    </div>
+
+    <!-- LOCKOUT KEYPAD (v8) -->
+    <div id="view-LOCKOUT_KEYPAD" class="view" style="justify-content:center;text-align:center;">
+      <div style="
+        width:80px;height:80px;border-radius:50%;
+        background:rgba(255,69,58,0.12);
+        -webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);
+        border:0.5px solid rgba(255,69,58,0.35);
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:var(--shadow-md),0 0 30px rgba(255,69,58,0.20);
+        margin-bottom:24px;position:relative;overflow:hidden;">
+        <div style="position:absolute;inset:0;border-radius:50%;background:var(--glass-specular);pointer-events:none;"></div>
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.8" style="position:relative;z-index:1;">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h1 style="color:var(--red);margin-bottom:8px;">Teclado Bloqueado</h1>
+      <p class="sub" style="margin-bottom:20px;">Muitas tentativas incorretas</p>
+      <div id="lockout-countdown" style="
+        font-size:48px;font-weight:200;letter-spacing:-2px;
+        color:var(--fg);font-variant-numeric:tabular-nums;">--:--</div>
+      <p style="color:var(--muted);font-size:13px;margin-top:16px;">Aguarde o tempo de segurança</p>
+    </div>
+
+    <!-- PWA INSTALL BANNER -->
+    <div id="pwa-banner" style="display:none;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <span style="font-size:30px;" aria-hidden="true">📲</span>
+        <div style="flex:1;">
+          <p style="font-size:14px;font-weight:600;margin-bottom:3px;color:var(--fg);">Adicione à Tela Inicial</p>
+          <p id="pwa-banner-hint" style="font-size:12px;color:var(--muted);">Safari → <b>⬆ Compartilhar</b> → "Adicionar à Tela de Início"</p>
+        </div>
+        <button id="pwa-banner-close"
+          style="background:rgba(255,255,255,0.12);border:0.5px solid rgba(255,255,255,0.18);
+                 color:var(--fg);font-size:16px;cursor:pointer;padding:0;
+                 width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;"
+          aria-label="Fechar">✕</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="view-settings" class="view">
+      <div class="settings-header">
+        <button class="back-btn" id="btn-back-dash" aria-label="Voltar">←</button>
+        <h1 style="font-size:22px;font-weight:700;letter-spacing:-.5px;">Configurações</h1>
+      </div>
+      <div class="settings-scroll">
+
+        <p class="section-label">Geral</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Modo Manutenção</span><label class="sw"><input type="checkbox" id="cfg-maint"><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Portaria 24 horas</span><label class="sw"><input type="checkbox" id="cfg-always-open" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Horário início (h)</span><input type="number" id="cfg-op-start" class="s-val" value="7" min="0" max="23"></div>
+          <div class="s-row"><span class="s-label">Horário fim (h)</span><input type="number" id="cfg-op-end" class="s-val" value="22" min="0" max="23"></div>
+        </div>
+
+        <p class="section-label">Porta P1 — Trava Externa</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Strike P1 habilitado</span><label class="sw"><input type="checkbox" id="cfg-strike-p1-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Pulso Strike P1</span><div class="range-wrap"><input type="range" id="cfg-door-open-ms" min="500" max="10000" step="100" value="3000" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">3000ms</span></div></div>
+          <div class="s-row"><span class="s-label">Timeout autorização</span><div class="range-wrap"><input type="range" id="cfg-auth-timeout" min="5000" max="30000" step="1000" value="10000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">10s</span></div></div>
+          <div class="s-row"><span class="s-label">Alerta P1 aberta</span><div class="range-wrap"><input type="range" id="cfg-door-alert-ms" min="30000" max="300000" step="5000" value="90000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">90s</span></div></div>
+          <div class="s-row"><span class="s-label">Alerta ciclos strike</span><input type="number" id="cfg-strike-cycle-alert" class="s-val" value="80000"></div>
+        </div>
+
+        <p class="section-label">Porta P2 — Trava Interna</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Strike P2 habilitado</span><label class="sw"><input type="checkbox" id="cfg-strike-p2-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Pulso Strike P2</span><div class="range-wrap"><input type="range" id="cfg-p2-open-ms" min="500" max="8000" step="100" value="3000" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">3000ms</span></div></div>
+          <div class="s-row"><span class="s-label">Delay P1 → P2</span><div class="range-wrap"><input type="range" id="cfg-p2-delay-ms" min="500" max="5000" step="100" value="2000" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">2000ms</span></div></div>
+          <div class="s-row"><span class="s-label">Janela acesso P2</span><div class="range-wrap"><input type="range" id="cfg-p2-window-ms" min="10000" max="120000" step="5000" value="30000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">30s</span></div></div>
+          <div class="s-row"><span class="s-label">Alerta P2 aberta</span><div class="range-wrap"><input type="range" id="cfg-p2-alert-ms" min="30000" max="300000" step="5000" value="60000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">60s</span></div></div>
+        </div>
+
+        <p class="section-label">Portão — Motor</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Portão habilitado</span><label class="sw"><input type="checkbox" id="cfg-gate-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Pulso botoeira (ms)</span><div class="range-wrap"><input type="range" id="cfg-gate-relay-ms" min="200" max="3000" step="50" value="500" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">500ms</span></div></div>
+          <div class="s-row"><span class="s-label">Alerta portão aberto</span><div class="range-wrap"><input type="range" id="cfg-gate-alert-ms" min="30000" max="600000" step="30000" value="120000" oninput="this.nextElementSibling.textContent=(this.value/60000).toFixed(1)+'min'"><span class="range-num">2.0min</span></div></div>
+          <div class="s-row"><span class="s-label">Fechar auto após entrada</span><label class="sw"><input type="checkbox" id="cfg-gate-auto-close"><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Delay fechar auto</span><div class="range-wrap"><input type="range" id="cfg-gate-close-delay" min="5000" max="60000" step="1000" value="15000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">15s</span></div></div>
+        </div>
+
+        <p class="section-label">Timers FSM</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Timeout AWAKE</span><div class="range-wrap"><input type="range" id="cfg-awake-ms" min="15000" max="120000" step="5000" value="60000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">60s</span></div></div>
+          <div class="s-row"><span class="s-label">Timeout QR Code</span><div class="range-wrap"><input type="range" id="cfg-qr-ms" min="10000" max="60000" step="5000" value="30000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">30s</span></div></div>
+          <div class="s-row"><span class="s-label">Timeout INSIDE_WAIT</span><div class="range-wrap"><input type="range" id="cfg-inside-ms" min="60000" max="600000" step="30000" value="180000" oninput="this.nextElementSibling.textContent=(this.value/60000).toFixed(1)+'min'"><span class="range-num">3.0min</span></div></div>
+          <div class="s-row"><span class="s-label">Exibição comprovante</span><div class="range-wrap"><input type="range" id="cfg-receipt-ms" min="30000" max="300000" step="10000" value="120000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">120s</span></div></div>
+        </div>
+
+        <p class="section-label">Balança (HX711)</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Peso mínimo entrega (g)</span><div class="range-wrap"><input type="range" id="cfg-min-w-g" min="20" max="500" step="10" value="50" oninput="this.nextElementSibling.textContent=this.value+'g'"><span class="range-num">50g</span></div></div>
+          <div class="s-row"><span class="s-label">Drift auto-zero (g)</span><div class="range-wrap"><input type="range" id="cfg-az-max" min="5" max="200" step="5" value="50" oninput="this.nextElementSibling.textContent=this.value+'g'"><span class="range-num">50g</span></div></div>
+          <div class="s-row"><span class="s-label">Peso de referência (g)</span><input type="number" id="cfg-cal-weight" class="s-val" value="1000"></div>
+          <div class="s-row" style="justify-content:flex-end;gap:10px;">
+            <button onclick="sendCmd('CMD_TARE_SCALE',0)" class="s-action-btn" style="color:var(--blue);border-color:rgba(10,132,255,0.30);background:rgba(10,132,255,0.10);">⚖️ Tarar</button>
+            <button onclick="sendCmd('CMD_CALIBRATE_SCALE',document.getElementById('cfg-cal-weight').value)" class="s-action-btn" style="color:var(--green);border-color:rgba(48,209,88,0.30);background:rgba(48,209,88,0.10);">📐 Calibrar</button>
+          </div>
+        </div>
+
+        <p class="section-label">INA219 — Corrente</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Mín Strike P1 (mA)</span><div class="range-wrap"><input type="range" id="cfg-ina-min" min="100" max="800" step="25" value="400" oninput="this.nextElementSibling.textContent=this.value+'mA'"><span class="range-num">400mA</span></div></div>
+          <div class="s-row"><span class="s-label">Máx Strike P1 (mA)</span><div class="range-wrap"><input type="range" id="cfg-ina-max" min="500" max="2000" step="50" value="1200" oninput="this.nextElementSibling.textContent=this.value+'mA'"><span class="range-num">1200mA</span></div></div>
+          <div class="s-row"><span class="s-label">Mín Strike P2 (mA)</span><div class="range-wrap"><input type="range" id="cfg-ina-p2-min" min="100" max="800" step="25" value="400" oninput="this.nextElementSibling.textContent=this.value+'mA'"><span class="range-num">400mA</span></div></div>
+          <div class="s-row"><span class="s-label">Máx Strike P2 (mA)</span><div class="range-wrap"><input type="range" id="cfg-ina-p2-max" min="500" max="2000" step="50" value="1200" oninput="this.nextElementSibling.textContent=this.value+'mA'"><span class="range-num">1200mA</span></div></div>
+        </div>
+
+        <p class="section-label">LED & Buzzer</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Brilho LED máx</span><div class="range-wrap"><input type="range" id="cfg-led-btn-max" min="50" max="255" step="5" value="200" oninput="this.nextElementSibling.textContent=this.value"><span class="range-num">200</span></div></div>
+          <div class="s-row"><span class="s-label">Período breathing (ms)</span><div class="range-wrap"><input type="range" id="cfg-led-breathe" min="500" max="5000" step="100" value="2000" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">2000ms</span></div></div>
+          <div class="s-row"><span class="s-label">Buzzer habilitado</span><label class="sw"><input type="checkbox" id="cfg-buzzer-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Duração bipe (ms)</span><div class="range-wrap"><input type="range" id="cfg-buzzer-ms" min="50" max="500" step="25" value="100" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">100ms</span></div></div>
+          <div class="s-row"><span class="s-label">Silenciar fora horário</span><label class="sw"><input type="checkbox" id="cfg-buzzer-silent"><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+        </div>
+
+        <p class="section-label">Teclado & Acesso</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Tentativas antes bloqueio</span><input type="number" id="cfg-kp-max-fails" class="s-val" value="5" min="3" max="10"></div>
+          <div class="s-row"><span class="s-label">Duração bloqueio (s)</span><input type="number" id="cfg-kp-lockout-s" class="s-val" value="600"></div>
+          <div class="s-row" style="justify-content:flex-end;">
+            <button onclick="sendCmd('CMD_RESET_KEYPAD_LOCKOUT',0)" class="s-action-btn" style="color:var(--red);border-color:rgba(255,69,58,0.30);background:rgba(255,69,58,0.10);">🔓 Resetar Bloqueio</button>
+          </div>
+        </div>
+
+        <p class="section-label">Radar de Presença (mmWave)</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Debounce presença (ms)</span><div class="range-wrap"><input type="range" id="cfg-radar-dbc" min="500" max="5000" step="100" value="1500" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">1500ms</span></div></div>
+          <div class="s-row"><span class="s-label">Exigir radar vazio</span><label class="sw"><input type="checkbox" id="cfg-mmw-req" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Alerta loitering</span><label class="sw"><input type="checkbox" id="cfg-loiter-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Tempo loitering</span><div class="range-wrap"><input type="range" id="cfg-loiter-ms" min="10000" max="120000" step="5000" value="30000" oninput="this.nextElementSibling.textContent=(this.value/1000)+'s'"><span class="range-num">30s</span></div></div>
+          <div class="s-row"><span class="s-label">Stale data máx (ms)</span><div class="range-wrap"><input type="range" id="cfg-stale-ms" min="50" max="500" step="25" value="150" oninput="this.nextElementSibling.textContent=this.value+'ms'"><span class="range-num">150ms</span></div></div>
+          <details style="width:100%;padding:12px 0;position:relative;z-index:1;">
+            <summary style="font-size:13px;color:var(--muted);cursor:pointer;list-style:none;-webkit-appearance:none;">▶ Gates de distância (avançado)</summary>
+            <div style="margin-top:12px;"><div id="mmw-gates"></div></div>
+          </details>
+        </div>
+
+        <p class="section-label">Cooler (Controle Térmico)</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Controle automático</span><label class="sw"><input type="checkbox" id="cfg-cooler-en" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Temp. início (°C)</span><div class="range-wrap"><input type="range" id="cfg-cool-min" min="35" max="60" step="1" value="45" oninput="this.nextElementSibling.textContent=this.value+'°C'"><span class="range-num">45°C</span></div></div>
+          <div class="s-row"><span class="s-label">Temp. máx 100% (°C)</span><div class="range-wrap"><input type="range" id="cfg-cool-max" min="50" max="80" step="1" value="70" oninput="this.nextElementSibling.textContent=this.value+'°C'"><span class="range-num">70°C</span></div></div>
+        </div>
+
+        <p class="section-label">Câmera & Tapo</p>
+        <div class="s-group">
+          <div class="s-row"><span class="s-label">Frames descartados</span><input type="number" id="cfg-cam-skip" class="s-val" value="5" min="3" max="15"></div>
+          <div class="s-row"><span class="s-label">Salvar foto no SD</span><label class="sw"><input type="checkbox" id="cfg-cam-save-sd" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Enviar foto para nuvem</span><label class="sw"><input type="checkbox" id="cfg-cam-upload" checked><span class="sw-track"></span><span class="sw-thumb"></span></label></div>
+          <div class="s-row"><span class="s-label">Duty cycle Tapo (%)</span><div class="range-wrap"><input type="range" id="cfg-tapo-duty" min="0" max="100" step="5" value="75" oninput="this.nextElementSibling.textContent=this.value+'%'"><span class="range-num">75%</span></div></div>
+          <div class="s-row"><span class="s-label">Ativação Tapo por evento</span><div class="range-wrap"><input type="range" id="cfg-tapo-active-s" min="10" max="300" step="10" value="60" oninput="this.nextElementSibling.textContent=this.value+'s'"><span class="range-num">60s</span></div></div>
+        </div>
+
+        <p class="section-label" style="color:var(--red);">Segurança</p>
+        <div class="s-group" style="border-color:rgba(255,69,58,0.25);background:rgba(255,69,58,0.06);">
+          <div class="s-row"><span class="s-label">Rotacionar segredo JWT</span>
+            <button onclick="if(confirm('Isso invalidará todos os QR Codes existentes. Continuar?'))sendCmd('CMD_ROTATE_JWT',0)" class="s-action-btn" style="color:var(--red);border-color:rgba(255,69,58,0.30);background:rgba(255,69,58,0.10);">Rotacionar</button>
+          </div>
+        </div>
+
+      </div>
+      <div class="save-bar">
+        <button class="btn-save" id="btn-save">Salvar Alterações</button>
+      </div>
+    </div>
+
+    <!-- DETAILS -->
+    <div id="view-details" class="view">
+      <h1 id="det-title" style="width:100%;margin-bottom:4px;font-size:28px;letter-spacing:-.7px;">Entrega Validada</h1>
+      <p style="color:var(--muted);font-size:14px;width:100%;margin-bottom:18px;">Comprovante Criptográfico</p>
+      <div class="badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        Assinatura Verificada
+      </div>
+      <div class="photo"><img id="det-photo" src="" alt="Pacote" loading="lazy"></div>
+      <div class="receipt">
+        <div class="r-row"><span class="r-lbl">Transportadora</span><span class="r-val" id="det-carrier">—</span></div>
+        <div class="r-row"><span class="r-lbl">Peso</span><span class="r-val" id="det-weight">—</span></div>
+        <div class="r-row" style="border-bottom:none;"><span class="r-lbl">Data/Hora</span><span class="r-val" id="det-date">—</span></div>
+      </div>
+      <button class="btn-back" id="btn-back-det">← Voltar</button>
+    </div>
+
+  </div><!-- /panel-content -->
+</div><!-- /panel -->
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
+HTMLEOF
+echo "index.html done"
