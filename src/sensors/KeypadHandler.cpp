@@ -1,7 +1,12 @@
 // src/sensors/KeypadHandler.cpp
 #include "KeypadHandler.h"
+#include "../config/Config.h"
 #include "../comms/UsbBridge.h"
+#include "../sensors/Scale.h"
+#include "../actuators/Strike.h"
+#include "../health/HealthMonitor.h"
 #include "../fsm/StateMachine.h"
+#include "../actuators/Led.h"
 
 KeypadHandler& KeypadHandler::instance() { static KeypadHandler i; return i; }
 
@@ -55,6 +60,9 @@ char KeypadHandler::getChar() {
 void KeypadHandler::update() {
     char c = getChar();
     if (c == 0) return;
+    
+    // Feedback tátil visual: 80ms de brilho no botão
+    Led::btn().blink_once(80);
 
     if (c == '#') {
         // Fim da senha
