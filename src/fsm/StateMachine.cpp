@@ -57,10 +57,14 @@ void StateMachine::_onEnter(State s) {
   switch (s) {
     case State::IDLE:        Led::btn().breathe(2000); Led::qr().off(); break;
     case State::MAINTENANCE: Led::btn().blink(1000);   Buzzer::beep(5,100); break;
-    case State::AWAKE:       Led::btn().solid(255);    Buzzer::beep(1,100); break;
-    case State::WAITING_QR:  Led::qr().solid(200);     Led::btn().blink(300); break;
+    case State::AWAKE:       Led::btn().solid(255);    break; // Beep removido conforme solicitado
+    case State::WAITING_QR:  
+      Led::qr().solid(200);     
+      Led::btn().blink(300); 
+      QRReader::instance().start_scan();
+      break;
     case State::AUTHORIZED:  
-      Buzzer::beep(2,150);      
+      Buzzer::beep(1,100); // Bipe de "caixa de supermercado" ao ler QR/Autorizar
       _ctx.ina_checked = false; // v8: Reset para validação de corrente
       break;
     case State::RECEIPT:     Buzzer::melody_success(); Led::btn().breathe(500); break;
@@ -69,7 +73,7 @@ void StateMachine::_onEnter(State s) {
       Buzzer::beep(3,200);      
       UsbBridge::instance().sendEvent("DELIVERY_ABORTED", _ctx);
       break;
-    case State::WAITING_PASS: Led::btn().blink(100); Buzzer::beep(1, 50); break;
+    case State::WAITING_PASS: break; // Feedback por tecla agora é no KeypadHandler
     case State::LOCKOUT_KEYPAD: Led::btn().blink(1000); Buzzer::beep(3, 300); break;
     default: break;
   }
@@ -77,6 +81,7 @@ void StateMachine::_onEnter(State s) {
 
 void StateMachine::_onExit(State s) {
   if (s == State::DOOR_ALERT) Buzzer::continuous(false);
+  if (s == State::WAITING_QR) QRReader::instance().stop_scan();
 }
 
 void StateMachine::tick(const PhysicalState& world) {
@@ -560,7 +565,7 @@ void StateMachine::_handleWaitingPass(const PhysicalState& w) {
     
     if (res.type == AccessType::NONE) {
       _ctx.keypad_fails++;
-      Buzzer::beep(3, 100);
+      Buzzer::beep(1, 800); // 1 bipe longo para senha errada
       if (_ctx.keypad_fails >= 5) {
         _ctx.lockout_until = millis() + 300000; // 5 min
         transition(State::LOCKOUT_KEYPAD);
