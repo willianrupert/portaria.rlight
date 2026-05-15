@@ -145,11 +145,21 @@ def main():
     
     running = True
     tick_count = 0
+    last_sync_time = 0
+    
     try:
         while running:
+            now = time.time()
             if systemd_notifier:
                 systemd_notifier.notify("WATCHDOG=1")
             
+            # Sincronização de Tempo: Host (OPi + DS3231) -> ESP32
+            # Ocorre no boot e a cada 10 minutos (12000 ticks de 0.05s)
+            if tick_count == 0 or (now - last_sync_time >= 600):
+                esp32_bridge.send_cmd("CMD_SYNC_TIME", {"ts": int(now)})
+                last_sync_time = now
+                print(f"[Sync] Tempo enviado para o ESP32: {int(now)}")
+
             # Broadcast periódico de configs para garantir sincronia na UI Web
             if tick_count % 20 == 0:  # 20 * 0.05s = 1 segundo
                 broadcast_ui_config()
