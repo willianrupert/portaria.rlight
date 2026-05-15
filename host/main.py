@@ -48,8 +48,8 @@ def on_state_transition(new_state, old_state):
     print(f"[Core FSM] Transição: {old_state} -> {new_state}")
     
     # Gerenciamento de Energia da Tela FÍSICA
-    # WAITING_PASS e LOCKOUT_KEYPAD devem manter a tela ligada
-    if new_state in ["IDLE", "MAINTENANCE", "OUT_OF_HOURS"]:
+    # Em v8, fluxo de senha (morador) não deve acender a tela por segurança e elegância.
+    if new_state in ["IDLE", "MAINTENANCE", "OUT_OF_HOURS", "WAITING_PASS", "LOCKOUT_KEYPAD", "RESIDENT_P1", "RESIDENT_P2"]:
         display_manager.dpms_control(False)
     else:
         display_manager.dpms_control(True)
