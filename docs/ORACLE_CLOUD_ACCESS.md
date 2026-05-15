@@ -1,74 +1,85 @@
-# Oracle Cloud Access - RLight Backend
+# Oracle Cloud Access - RLight Infrastructure (Ampere Update)
 
-Este documento centraliza as informações necessárias para acessar e gerenciar o servidor de nuvem da Oracle onde o backend do RLight está hospedado.
+Este documento centraliza as informações necessárias para acessar e gerenciar a infraestrutura multi-instância da RLight na Oracle Cloud, atualizada para a arquitetura Ampere.
 
 ---
 
-## 🌐 Informações de Conexão
+## 🏗️ Arquitetura de Rede
 
-- **IP Público**: `136.248.96.1`
-- **Usuário**: `ubuntu`
-- **Chave SSH**: `/Users/willian/Documents/ChavesOracleCloud/136.248.96.1/ssh-key-2025-11-29.key`
-- **Subdomínio**: `portaria.rlight.com.br`
+A infraestrutura é composta por instâncias em uma VCN privada, acessadas via Bastion:
 
-### Comando de Acesso (Terminal)
+| Instância | IP Público | IP Privado | Função |
+| :--- | :--- | :--- | :--- |
+| **Micro 1** | `136.248.96.1` | `10.0.0.134` | **Bastion / Gateway / Nginx** |
+| **Ampere** | N/A | `10.0.0.230` | **App Server (Principal)** |
+
+---
+
+## 🔑 Localização das Chaves SSH
+
+As chaves agora estão centralizadas na pasta do projeto de servidores:
+- **Bastion**: `/Users/willian/Projetos/RLight_Servers/Oracle_Server/ChavesOracleCloud/136.248.96.1/ssh-key-2025-11-29.key`
+- **Ampere**: `/Users/willian/Projetos/RLight_Servers/Oracle_Server/ChavesOracleCloud/Ampere/ssh-key-2026-03-11.key`
+
+---
+
+## 🚀 Como Acessar (SSH)
+
+### 1. Configuração Recomendada (`~/.ssh/config`)
+Adicione este trecho ao seu arquivo de configuração SSH local para acesso rápido:
+
+```text
+Host oracle-micro-1
+    HostName 136.248.96.1
+    User ubuntu
+    IdentityFile ~/Projetos/RLight_Servers/Oracle_Server/ChavesOracleCloud/136.248.96.1/ssh-key-2025-11-29.key
+
+Host oracle-ampere
+    HostName 10.0.0.230
+    User ubuntu
+    IdentityFile ~/Projetos/RLight_Servers/Oracle_Server/ChavesOracleCloud/Ampere/ssh-key-2026-03-11.key
+    ProxyJump oracle-micro-1
+```
+
+### 2. Comandos de Acesso Direto
+Caso não utilize o config:
+
+- **Acessar Bastion**:
+  ```bash
+  ssh -i ~/Projetos/RLight_Servers/Oracle_Server/ChavesOracleCloud/136.248.96.1/ssh-key-2025-11-29.key ubuntu@136.248.96.1
+  ```
+
+- **Acessar Ampere (via Bastion)**:
+  ```bash
+  ssh -i ~/Projetos/RLight_Servers/Oracle_Server/ChavesOracleCloud/Ampere/ssh-key-2026-03-11.key \
+      -o "ProxyCommand ssh -i ~/Projetos/RLight_Servers/Oracle_Server/ChavesOracleCloud/136.248.96.1/ssh-key-2025-11-29.key -W %h:%p ubuntu@136.248.96.1" \
+      ubuntu@10.0.0.230
+  ```
+
+---
+
+## 📋 Serviços Rodando (Ampere)
+
+O backend principal agora roda na instância Ampere gerenciado pelo **PM2**:
+
+- **rlight-cloud**: Porta `3005` (Backend + UI)
+- **prompt-api**: Porta `8000`
+- **prompt-ui**: Porta `8501`
+
+**NGINX (na Micro 1)**: Redireciona o tráfego de `portaria.rlight.com.br` para a porta `3005` da Ampere via rede interna.
+
+---
+
+## 🛠️ Comandos de Deploy (SCP)
+
+Para enviar atualizações para o App Server:
+
 ```bash
-ssh -i /Users/willian/Documents/ChavesOracleCloud/136.248.96.1/ssh-key-2025-11-29.key ubuntu@136.248.96.1
+# Exemplo: Atualizar index.html na Ampere
+scp -i ~/Projetos/RLight_Servers/Oracle_Server/ChavesOracleCloud/Ampere/ssh-key-2026-03-11.key \
+    -o "ProxyJump ubuntu@136.248.96.1" \
+    ./public/index.html ubuntu@10.0.0.230:~/cloud_backend/public/index.html
 ```
 
 ---
-
-## 📁 Estrutura do Projeto
-
-- **Diretório do Backend**: `/home/ubuntu/cloud_backend/`
-- **Arquivos Públicos (UI)**: `/home/ubuntu/cloud_backend/public/`
-- **Logs do Servidor**: Gerenciados via PM2.
-
----
-
-## 🚀 Gerenciamento de Processos (PM2)
-
-O backend utiliza o **PM2** para garantir que o servidor Node.js permaneça online 24/7.
-
-- **Listar processos**: `pm2 list`
-- **Ver logs em tempo real**: `pm2 logs server`
-- **Reiniciar o servidor**: `pm2 restart server`
-- **Parar o servidor**: `pm2 stop server`
-
----
-
-## 🛡️ Configuração de Rede e NGINX
-
-O NGINX atua como proxy reverso para a porta `3005`.
-
-- **Arquivo de Configuração**: `/etc/nginx/sites-available/portaria.rlight.conf`
-- **Testar configuração**: `sudo nginx -t`
-- **Recarregar NGINX**: `sudo systemctl reload nginx`
-
----
-
-## 🔐 Certificados SSL (Certbot)
-
-Os certificados são gerenciados pelo Certbot (Let's Encrypt).
-
-- **Verificar status**: `sudo certbot certificates`
-- **Renovação manual**: `sudo certbot renew`
-
----
-
-## 🛠️ Comandos Úteis de SCP (Upload)
-
-Para enviar atualizações da sua máquina local para a nuvem:
-
-### Atualizar o Dashboard (index.html)
-```bash
-scp -i /Users/willian/Documents/ChavesOracleCloud/136.248.96.1/ssh-key-2025-11-29.key ./cloud_backend/public/index.html ubuntu@136.248.96.1:/home/ubuntu/cloud_backend/public/index.html
-```
-
-### Atualizar o Servidor (server.js)
-```bash
-scp -i /Users/willian/Documents/ChavesOracleCloud/136.248.96.1/ssh-key-2025-11-29.key ./cloud_backend/server.js ubuntu@136.248.96.1:/home/ubuntu/cloud_backend/server.js
-```
-
----
-*Documentação gerada em 10 de Maio de 2026.*
+*Atualizado em 15 de Maio de 2026 conforme nova infraestrutura Ampere.*
