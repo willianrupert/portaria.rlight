@@ -6,21 +6,21 @@ QRReader& QRReader::instance() { static QRReader i; return i; }
 
 bool QRReader::init() {
   Serial1.begin(9600, SERIAL_8N1, PIN_UART0_RX, PIN_UART0_TX); 
-  // Nota: o código original usa a macro da Serial normal pra GM861S mas setamos na UART0/1.
+  delay(100); // Aguarda boot do sensor
+  configure();
   return true;
 }
-
 const char* QRReader::poll() {
   _has_result = false;
 
-  // S20: Rate limiter
+  // Rate limiter / Cooldown
   if (millis() < _cooldown_until) {
     while (Serial1.available()) Serial1.read(); 
     return nullptr;
   }
 
-  // Lê apenas bytes disponíveis — zero espera
-  while (Serial1.available()) {    // UART0/1 do GM861S
+  // Lê bytes disponíveis do GM861S
+  while (Serial1.available()) {
     char c = (char)Serial1.read();
 
     if (c == '\r' || c == '\n') {
@@ -35,7 +35,6 @@ const char* QRReader::poll() {
       if (_rx_pos < QR_RX_BUF_SIZE - 1) {
         _rx_buf[_rx_pos++] = c;
       } else {
-        // Buffer cheio: código inválido, descarta
         _rx_pos = 0;
       }
     }
@@ -64,6 +63,39 @@ const char* QRReader::poll() {
   }
 
   return _has_result ? _result : nullptr;
+}
+
+void QRReader::configure() {
+  // Configuração global (Zone Bit 0x0000):
+  // Bit 6: 0 (Mute ON)
+  // Bit 5-4: 01 (Standard Light)
+  // Bit 3-2: 01 (Standard Aiming)
+  // Bit 1-0: 01 (Command Trigger Mode)
+  // Valor: 0x15
+  uint8_t cfg_cmd[] = {0x7E, 0x00, 0x08, 0x01, 0x00, 0x00, 0x15, 0xAB, 0xCD};
+  _send_command(cfg_cmd, sizeof(cfg_cmd));
+  delay(50);
+  
+  // Salva configurações na Flash do sensor para persistir após reboot
+  uint8_t save_cmd[] = {0x7E, 0x00, 0x09, 0x01, 0x00, 0x00, 0x00, 0xDE, 0xC8};
+  _send_command(save_cmd, sizeof(save_cmd));
+}
+
+void QRReader::start_scan() {
+  // Comando de Trigger Serial (Página 26 do manual)
+  uint8_t trigger[] = {0x7E, 0x00, 0x08, 0x01, 0x00, 0x02, 0x01, 0xAB, 0xCD};
+  _send_command(trigger, sizeof(trigger));
+}
+
+void QRReader::stop_scan() {
+  // Para interromper a leitura antes do timeout (setando bit trigger para 0)
+  uint8_t stop[] = {0x7E, 0x00, 0x08, 0x01, 0x00, 0x02, 0x00, 0xAB, 0xCD};
+  _send_command(stop, sizeof(stop));
+}
+
+void QRReader::_send_command(const uint8_t* cmd, size_t len) {
+  Serial1.write(cmd, len);
+  Serial1.flush();
 }
 
 // Identificação de transportadora por prefixo/estrutura
