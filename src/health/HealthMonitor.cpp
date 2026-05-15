@@ -5,10 +5,16 @@
 
 void HealthMonitor::report(SensorID id, bool ok, const char* context_reason) {
   int idx = (int)id;
+  bool was_usable = usable(id);
+  
   if(ok) {
     _failures[idx] = 0;
+    if (!was_usable) Serial.printf("[HEALTH] Sensor %d RECOVERED (%s)\n", idx, context_reason ? context_reason : "none");
   } else {
     if (_failures[idx] < 255) _failures[idx]++;
+    if (was_usable && !usable(id)) {
+      Serial.printf("[HEALTH] Sensor %d FAILED (%s)\n", idx, context_reason ? context_reason : "none");
+    }
   }
 }
 
