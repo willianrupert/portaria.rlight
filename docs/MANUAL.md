@@ -16,7 +16,8 @@ Abaixo estão os componentes técnicos exatos para a construção da portaria:
 ### Processamento e Lógica
 *   **1x Single Board Computer:** Orange Pi Zero 3 (Allwinner H618, 1.5GHz, 2GB LPDDR4).
 *   **1x Microcontrolador IO:** Módulo ESP32-S3 WROOM-2 N8R8 (8MB PSRAM Octal, 8MB Flash).
-*   **1x Placa de Expansão (Breakout Board):** Placa Base para ESP32 de 38 Pinos (Facilita fiação por bornes a parafuso).
+*   **1x Módulo RTC:** DS3231 I2C Precision RTC (Conectado ao Orange Pi).
+*   **1x Placa de Expansão (Breakout Board):** Placa Base para ESP32 de 38 Pinos.
 *   **1x Cartão de Memória:** MicroSD 32GB Classe 10 A1 (Industrial preferencialmente, ex: SanDisk High Endurance).
 
 ### Sensores e Módulos de Comunicação
@@ -186,3 +187,16 @@ Ficam localizados no Painel C. Usados para confirmar via sensor de Hall/Shunt qu
 > [!CAUTION]
 > **Integridade de Barramento (Bypass e Pull-ups):**
 > Adicione **resistores pull-up de 4.7kΩ** nos terminais `SDA` e `SCL` puxando para `3.3V` nos bornes da placa Breakout Board do ESP32. Além disso, solde pequenos capacitores de bypass cerâmicos (`100nF`) perto dos pinos VCC e GND dos chips PCF8574 e INA219. Essas práticas suprimem EMI em chicotes longos e mantêm o I2C com 100% de confiabilidade.
+
+### 5.4 Relógio de Tempo Real (RTC DS3231)
+Para garantir que os logs e JWTs tenham o horário correto mesmo sem internet, o DS3231 deve ser ligado ao **Orange Pi Zero 3**:
+
+| Pino DS3231 | Pino Orange Pi (Header 26p) | Função |
+| :--- | :--- | :--- |
+| **VCC** | Pin 1 | 3.3V |
+| **GND** | Pin 9 | Ground |
+| **SDA** | Pin 3 | I2C1 SDA |
+| **SCL** | Pin 5 | I2C1 SCL |
+
+> [!TIP]
+> O Host (Python) lê a hora do sistema do Orange Pi e a envia periodicamente (a cada 10 min) para o ESP32 sincronizar seu clock interno.
