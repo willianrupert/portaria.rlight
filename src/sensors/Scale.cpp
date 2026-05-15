@@ -4,6 +4,7 @@
 #include <Preferences.h>
 #include "../config/Config.h"
 #include "../config/ConfigManager.h"
+#include "../health/HealthMonitor.h"
 
 static HX711    _hx;
 static float    _zero_offset  = 0.0f;   // RAM — nunca NVS
@@ -14,7 +15,12 @@ Scale& Scale::instance() { static Scale i; return i; }
 
 bool Scale::init() {
   _hx.begin(PIN_HX711_DATA, PIN_HX711_CLK);
-  if (!_hx.is_ready()) return false;
+  bool ok = _hx.is_ready();
+  HealthMonitor::instance().report(SensorID::HX711, ok, "init");
+  if (!ok) {
+    Serial.println("[Scale] Falha ao iniciar HX711 (Verificar fiação)");
+    return false;
+  }
 
   // Carrega APENAS o fator de calibração da NVS
   Preferences prefs;
@@ -29,12 +35,15 @@ bool Scale::init() {
 bool Scale::initRaw() {
   // Boot: inicializa sem tare — preserva leitura raw para detecção de pacote residual
   _hx.begin(PIN_HX711_DATA, PIN_HX711_CLK);
+  bool ok = _hx.is_ready();
+  HealthMonitor::instance().report(SensorID::HX711, ok, "initRaw");
+  
   Preferences prefs;
   prefs.begin("scale", true);
   _cal_factor = prefs.getFloat("cal", 1.0f);
   prefs.end();
   _hx.set_scale(_cal_factor);
-  return _hx.is_ready();
+  return ok;
 }
 
 long Scale::readRaw() {
@@ -63,8 +72,12 @@ void Scale::calibrate(float known_g) {
 }
 
 float Scale::readOne() {
+  if (!_hx.is_ready()) {
+    HealthMonitor::instance().report(SensorID::HX711, false, "read_timeout");
+    return -9999.0f;
+  }
   long raw = _hx.read();
-  if (raw == LONG_MIN) return -9999.0f;
+  HealthMonitor::instance().report(SensorID::HX711, true, "read_ok");
   return ((float)raw - _zero_offset) / _cal_factor;
 }
 
