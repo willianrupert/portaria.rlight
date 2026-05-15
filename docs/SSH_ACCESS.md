@@ -1,25 +1,36 @@
-# Oracle Cloud Access - RLight Infrastructure (Ampere Update)
+# SSH Access - RLight Infrastructure (Cloud & Local)
 
-Este documento centraliza as informações necessárias para acessar e gerenciar a infraestrutura multi-instância da RLight na Oracle Cloud, atualizada para a arquitetura Ampere.
+Este documento centraliza as informações necessárias para acessar e gerenciar a infraestrutura da RLight, incluindo os servidores na Oracle Cloud (Ampere) e o hardware local (Orange Pi).
 
 ---
 
 ## 🏗️ Arquitetura de Rede
 
-A infraestrutura é composta por instâncias em uma VCN privada, acessadas via Bastion:
+### ☁️ Cloud (Oracle Cloud Infrastructure)
+A infraestrutura em nuvem é composta por instâncias em uma VCN privada, acessadas via Bastion:
 
 | Instância | IP Público | IP Privado | Função |
 | :--- | :--- | :--- | :--- |
 | **Micro 1** | `136.248.96.1` | `10.0.0.134` | **Bastion / Gateway / Nginx** |
 | **Ampere** | N/A | `10.0.0.230` | **App Server (Principal)** |
 
+### 🏠 Local (Hardware Host)
+O host local que orquestra os sensores e o ESP32:
+
+| Dispositivo | IP Local | Usuário | Função |
+| :--- | :--- | :--- | :--- |
+| **Orange Pi Zero 3** | `192.168.88.91` | `portaria` | **Host Orchestrator / Local API** |
+
 ---
 
 ## 🔑 Localização das Chaves SSH
 
-As chaves agora estão centralizadas na pasta do projeto de servidores:
+### ☁️ Cloud Keys
 - **Bastion**: `/Users/willian/Projetos/RLight_Servers/Oracle_Server/ChavesOracleCloud/136.248.96.1/ssh-key-2025-11-29.key`
 - **Ampere**: `/Users/willian/Projetos/RLight_Servers/Oracle_Server/ChavesOracleCloud/Ampere/ssh-key-2026-03-11.key`
+
+### 🏠 Local Keys
+- **Orange Pi**: `~/.ssh/id_rlight_opi` (Chave ED25519)
 
 ---
 
@@ -39,6 +50,11 @@ Host oracle-ampere
     User ubuntu
     IdentityFile ~/Projetos/RLight_Servers/Oracle_Server/ChavesOracleCloud/Ampere/ssh-key-2026-03-11.key
     ProxyJump oracle-micro-1
+
+Host rlight-opi
+    HostName 192.168.88.91
+    User portaria
+    IdentityFile ~/.ssh/id_rlight_opi
 ```
 
 ### 2. Comandos de Acesso Direto
