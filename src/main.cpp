@@ -34,13 +34,16 @@ void setup() {
   ConfigManager::instance().loadAll();
   UsbBridge::instance().init();
 
-  // Inicialização de Sensores
-  Scale::instance().init();
-  MmWave::instance().init();
-  QRReader::instance().init();
-  KeypadHandler::instance().init(I2C_ADDR_KEYPAD); 
-  PowerMonitor::P1().init(I2C_ADDR_INA219);
-  PowerMonitor::P2().init(I2C_ADDR_INA219_P2);
+  // Inicialização de Sensores (v8: Robust Boot)
+  bool s1 = Scale::instance().init();
+  bool s2 = MmWave::instance().init();
+  bool s3 = QRReader::instance().init();
+  bool s4 = KeypadHandler::instance().init(I2C_ADDR_KEYPAD); 
+  bool s5 = PowerMonitor::P1().init(I2C_ADDR_INA219);
+  bool s6 = PowerMonitor::P2().init(I2C_ADDR_INA219_P2);
+
+  Serial.printf("[BOOT] Sensores: Scale:%d, mmWave:%d, QR:%d, Keypad:%d, INA1:%d, INA2:%d\n",
+    s1, s2, s3, s4, s5, s6);
 
   // Configuração de Pinos v8
   pinMode(PIN_SW_P1, INPUT_PULLUP);
