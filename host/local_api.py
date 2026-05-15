@@ -69,6 +69,15 @@ def update_settings(body: dict):
 @app.websocket("/ui/stream")
 async def websocket_endpoint(websocket: WebSocket):
     await ws_manager.connect(websocket)
+    # Envia o estado atual imediatamente após conectar para sincronizar a UI
+    await websocket.send_json({
+        "type": "state_change",
+        "state": host_fsm.get_state(),
+        "jwt": host_fsm.get_jwt(),
+        "weight_g": host_fsm.get_weight(),
+        "carrier": host_fsm.get_carrier(),
+        "resident_label": host_fsm.get_resident_label()
+    })
     try:
         while True:
             data = await websocket.receive_text()

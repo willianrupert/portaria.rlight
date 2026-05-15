@@ -45,7 +45,8 @@ def broadcast_telemetry():
 
 def on_state_transition(new_state, old_state):
     """Hook chamado sempre que a FSM do microcontrolador mudar."""
-    print(f"[Core FSM] Transição: {old_state} -> {new_state}")
+    new_state = "AWAKE" # OVERRIDE PARA OBSERVAÇÃO (SEM SENSORES)
+    print(f"[Core FSM] Transição: {old_state} -> {new_state} (FORCED)")
     
     # Gerenciamento de Energia da Tela FÍSICA
     # Em v8, fluxo de senha (morador) não deve acender a tela por segurança e elegância.
@@ -142,6 +143,9 @@ def main():
     host_fsm.subscribe(on_state_transition)
     host_fsm.subscribe_event(on_event)
     esp32_bridge.start()
+    
+    # Força a configuração inicial da tela no boot
+    on_state_transition(host_fsm.get_state(), None)
     
     running = True
     tick_count = 0

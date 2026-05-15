@@ -1,0 +1,17 @@
+[Unit]
+Description=RLight Portaria Digital v8 - Local API (FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+User=portaria
+WorkingDirectory=/home/portaria/rlight/host
+ExecStart=/home/portaria/rlight/venv/bin/python local_api.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rlight-api
+
+[Install]
+WantedBy=multi-user.target

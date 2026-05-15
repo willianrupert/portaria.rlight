@@ -90,8 +90,7 @@ class MachineState:
                 print(f"[Event Error] Listener exception: {e}")
 
     def get_state(self):
-        with self._lock:
-            return self._state
+        return "AWAKE" # OVERRIDE PARA OBSERVAÇÃO
 
     def get_last_state(self):
         with self._lock:
