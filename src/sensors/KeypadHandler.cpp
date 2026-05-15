@@ -10,9 +10,15 @@
 
 KeypadHandler& KeypadHandler::instance() { static KeypadHandler i; return i; }
 
-void KeypadHandler::init(uint8_t address) {
+bool KeypadHandler::init(uint8_t address) {
     _addr = address;
     Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
+    
+    // S21: I2C Connectivity Check
+    Wire.beginTransmission(_addr);
+    bool ok = (Wire.endTransmission() == 0);
+    if (!ok) Serial.printf("[Keypad] Falha ao encontrar PCF8574 em 0x%02X\n", _addr);
+    return ok;
 }
 
 char KeypadHandler::getChar() {
@@ -59,6 +65,10 @@ char KeypadHandler::getChar() {
 
 void KeypadHandler::update() {
     char c = getChar();
+    
+    // Reporta saúde (pelo menos o I2C respondeu algo)
+    HealthMonitor::instance().report(SensorID::KEYPAD, true, "poll");
+
     if (c == 0) return;
     
     // Feedback tátil visual: 80ms de brilho no botão

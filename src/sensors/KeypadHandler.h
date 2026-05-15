@@ -11,7 +11,7 @@ class KeypadHandler {
 public:
     static KeypadHandler& instance();
     
-    void init(uint8_t address = 0x20);
+    bool init(uint8_t address = 0x20);
     
     // Retorna o caractere da tecla pressionada ('0'-'9', '*', '#') ou 0 se nenhuma.
     char getChar();
