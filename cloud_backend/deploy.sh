@@ -6,10 +6,10 @@ echo "[Cloud Deploy] Iniciando atualização automática..."
 cd /home/ubuntu/cloud_backend || exit
 
 # 1. Busca alterações sem mesclar
-git fetch origin main
+git fetch origin prod
 
 # 2. Força o estado local a ser idêntico ao remoto
-git reset --hard origin/main
+git reset --hard origin/prod
 
 # 3. Atualiza dependências se necessário
 if [ -f "package.json" ]; then

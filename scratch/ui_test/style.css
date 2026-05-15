@@ -88,14 +88,7 @@ body {
   z-index: 0;
   overflow: hidden;
   background-color: #0A0A18;
-  /* Use percentages for better Safari cross-version compatibility */
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(88,70,245,0.30) 0%, transparent 60%),
-    radial-gradient(at 100% 0%, rgba(10,132,255,0.20) 0%, transparent 60%),
-    radial-gradient(at 100% 100%, rgba(48,209,88,0.12) 0%, transparent 60%),
-    radial-gradient(at 0% 100%, rgba(255,69,58,0.10) 0%, transparent 60%);
-  /* Remove scale animation — it causes flicker on backdrop-filter layers */
-  animation: bg-fade-in 1.5s ease-out both;
+  /* Mesh gradient disabled temporarily for flicker debug */
   /* Force GPU layer */
   -webkit-transform: translate3d(0,0,0);
   transform: translate3d(0,0,0);

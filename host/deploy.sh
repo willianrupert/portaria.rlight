@@ -6,10 +6,10 @@ echo "[Deploy] Iniciando atualização automática..."
 cd /home/portaria/rlight || exit
 
 # 1. Busca alterações sem mesclar
-git fetch origin main
+git fetch origin prod
 
 # 2. Força o estado local a ser idêntico ao remoto (descarta mudanças locais acidentais)
-git reset --hard origin/main
+git reset --hard origin/prod
 
 # 3. Permissões (opcional mas recomendado)
 chmod +x host/deploy.sh
