@@ -1,5 +1,6 @@
 // src/health/HealthMonitor.cpp
 #include "HealthMonitor.h"
+#include "../config/Config.h"
 #include "../config/ConfigManager.h"
 
 void HealthMonitor::report(SensorID id, bool ok, const char* context_reason) {

@@ -4,6 +4,7 @@
 #include "../config/ConfigManager.h"
 #include "../sensors/Scale.h"
 #include "../actuators/Strike.h"
+#include "../health/HealthMonitor.h"
 
 void UsbBridge::init() {
   _scr_rdy = false;

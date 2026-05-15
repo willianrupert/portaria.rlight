@@ -4,6 +4,7 @@
 #include <esp_bt.h>
 #include <esp_task_wdt.h>
 
+#include "health/HealthMonitor.h"
 #include "config/Config.h"
 #include "config/ConfigManager.h"
 #include "middleware/SharedMemory.h"
@@ -14,6 +15,7 @@
 #include "sensors/KeypadHandler.h"
 #include "actuators/Strike.h"
 #include "comms/UsbBridge.h"
+#include "sensors/PowerMonitor.h"
 
 // Protótipos das Tasks
 void taskLogicBrain(void* p);
