@@ -1,6 +1,6 @@
-// src/sensors/QRReader.cpp
 #include "QRReader.h"
 #include <ctype.h>
+#include "../health/HealthMonitor.h"
 
 QRReader& QRReader::instance() { static QRReader i; return i; }
 
@@ -8,12 +8,14 @@ bool QRReader::init() {
   Serial1.begin(9600, SERIAL_8N1, PIN_UART0_RX, PIN_UART0_TX); 
   delay(100); // Aguarda boot do sensor
   configure();
+  // Assume OK se inicializou serial; a saúde real é validada no poll()
+  HealthMonitor::instance().report(SensorID::GM861, true, "init");
   return true;
 }
 const char* QRReader::poll() {
   _has_result = false;
-
-  // Rate limiter / Cooldown
+  
+  // S20: Rate limiter
   if (millis() < _cooldown_until) {
     while (Serial1.available()) Serial1.read(); 
     return nullptr;
@@ -41,6 +43,7 @@ const char* QRReader::poll() {
   }
 
   if (_has_result) {
+    HealthMonitor::instance().report(SensorID::GM861, true, "data_rx");
     char carrier_buf[24];
     identifyCarrier(_result, carrier_buf, sizeof(carrier_buf));
     
