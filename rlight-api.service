@@ -6,6 +6,7 @@ After=network.target
 Type=simple
 User=portaria
 WorkingDirectory=/home/portaria/rlight/host
+ExecStartPre=/bin/bash /home/portaria/rlight/host/deploy.sh
 ExecStart=/home/portaria/rlight/venv/bin/python local_api.py
 Restart=always
 RestartSec=5
