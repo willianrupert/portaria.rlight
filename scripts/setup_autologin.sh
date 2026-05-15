@@ -12,14 +12,20 @@ TARGET_USER=${SUDO_USER:-willian}
 
 echo "[Setup] Configurando autologin para o usuário: $TARGET_USER"
 
-# Cria diretório de override do getty
+# Configuração para tty1 (Console Físico/HDMI)
 mkdir -p /etc/systemd/system/getty@tty1.service.d/
-
-# Gera o arquivo de configuração
 cat <<EOF > /etc/systemd/system/getty@tty1.service.d/autologin.conf
 [Service]
 ExecStart=
 ExecStart=-/sbin/agetty --autologin $TARGET_USER --noclear %I \$TERM
+EOF
+
+# Configuração para ttyS0 (Console Serial/Debug)
+mkdir -p /etc/systemd/system/serial-getty@ttyS0.service.d/
+cat <<EOF > /etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin $TARGET_USER --keep-baud 115200,57600,38400,9600 %I \$TERM
 EOF
 
 # Recarrega o systemd
