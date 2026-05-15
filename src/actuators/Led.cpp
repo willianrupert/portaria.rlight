@@ -31,7 +31,16 @@ void Led::breathe(uint32_t period_ms) {
   _period = period_ms;
 }
 
+void Led::blink_once(uint32_t duration_ms) {
+  _blink_until = millis() + duration_ms;
+}
+
 void Led::tick() {
+  if (millis() < _blink_until) {
+    ledcWrite(_channel, 255);
+    return;
+  }
+
   if (_mode == BLINK) {
     uint32_t t = millis() % _period;
     ledcWrite(_channel, t < (_period / 2) ? 255 : 0);

@@ -12,6 +12,7 @@ public:
   void solid(uint8_t brightness);
   void blink(uint32_t period_ms);
   void breathe(uint32_t period_ms);
+  void blink_once(uint32_t duration_ms);
   
   void tick(); // Tick assíncrono
 
@@ -24,4 +25,5 @@ private:
   enum Mode { OFF, SOLID, BLINK, BREATHE } _mode = OFF;
   uint32_t _period = 0;
   uint8_t  _brightness = 0;
+  uint32_t _blink_until = 0;
 };
