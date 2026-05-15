@@ -7,6 +7,7 @@ Type=simple
 User=willian
 WorkingDirectory=/home/ubuntu/cloud_backend
 EnvironmentFile=/home/ubuntu/cloud_backend/.env
+ExecStartPre=/bin/bash /home/ubuntu/cloud_backend/deploy.sh
 ExecStart=/usr/bin/node /home/ubuntu/cloud_backend/server.js
 Restart=always
 RestartSec=5
