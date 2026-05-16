@@ -14,6 +14,10 @@ xset s off
 xset -dpms
 xset s noblank
 
+# Rotaciona a tela para a esquerda (90 graus CCW - vertical)
+echo "[Kiosk] Rotacionando tela para a esquerda..."
+xrandr --output HDMI-1 --rotate left
+
 # Limpa flag de erro do Chromium se existir
 sed -i 's/"exited_cleanly":false/"exited_cleanly":true/' ~/.config/chromium/Default/Preferences 2>/dev/null
 sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' ~/.config/chromium/Default/Preferences 2>/dev/null
