@@ -18,6 +18,9 @@ xset s noblank
 echo "[Kiosk] Rotacionando tela para a esquerda..."
 xrandr --output HDMI-1 --rotate left
 
+# Oculta o cursor do mouse após 0.1s de inatividade
+unclutter -idle 0.1 -root &
+
 # Limpa flag de erro do Chromium se existir
 sed -i 's/"exited_cleanly":false/"exited_cleanly":true/' ~/.config/chromium/Default/Preferences 2>/dev/null
 sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' ~/.config/chromium/Default/Preferences 2>/dev/null
