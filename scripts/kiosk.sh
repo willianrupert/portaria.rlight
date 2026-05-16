@@ -30,8 +30,6 @@ echo "[Kiosk] Iniciando Chromium em modo Fullscreen..."
     --noerrdialogs \
     --disable-infobars \
     --kiosk \
-    --window-size=1024,600 \
-    --window-position=0,0 \
     --autoplay-policy=no-user-gesture-required \
     --check-for-update-interval=31536000 \
     http://localhost:8080/ui/index.html
