@@ -1,0 +1,19 @@
+[Unit]
+Description=RLight Portaria v8 UI Kiosk
+After=network.target rlight-host.service
+Wants=rlight-host.service
+
+[Service]
+Type=simple
+User=portaria
+WorkingDirectory=/home/portaria/rlight/host
+# xinit inicia o X server e roda o script de kiosk
+ExecStart=/usr/bin/xinit /home/portaria/rlight/scripts/kiosk.sh -- :0 vt1
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rlight-ui
+
+[Install]
+WantedBy=multi-user.target
