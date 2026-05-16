@@ -5,7 +5,7 @@
 export DISPLAY=:0
 
 # Aguarda a API estar disponível (porta 8080)
-while ! nc -z localhost 8080; do   
+while ! python3 -c "import socket; s = socket.socket(); s.connect(('localhost', 8080))" 2>/dev/null; do   
   sleep 1
 done
 
