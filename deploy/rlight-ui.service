@@ -7,13 +7,16 @@ Wants=rlight-host.service
 Type=simple
 User=portaria
 WorkingDirectory=/home/portaria/rlight/host
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rlight-ui
 # xinit inicia o X server e roda o script de kiosk
 ExecStart=/usr/bin/xinit /home/portaria/rlight/scripts/kiosk.sh -- :0 vt1
 Restart=always
 RestartSec=5
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=rlight-ui
 
 [Install]
 WantedBy=multi-user.target
